@@ -41,7 +41,7 @@ class Guests<Command, Message> extends ObservableArray<ConnectedGuest<Command, M
 		transport.events.handle(function(e) switch e {
 			case GuestConnected(id): connect(id);
 			case GuestDisonnected(id): disconnect(id);
-			case CommandReceived(id, command):
+			case _:
 		});
 		
 		changes.handle(change -> switch change {

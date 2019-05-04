@@ -20,10 +20,12 @@ enum HostEvent<Command> {
 	GuestConnected(id:Int);
 	GuestDisonnected(id:Int);
 	CommandReceived(id:Int, command:Command);
+	Errored(error:Error);
 }
 
 enum GuestEvent<Message> {
 	Connected;
 	Disonnected;
 	MessageReceived(message:Message);
+	Errored(error:Error);
 }

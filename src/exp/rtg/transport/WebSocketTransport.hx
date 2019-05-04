@@ -18,11 +18,13 @@ class WebSocketHostTransport<Command, Message> implements HostTransport<Command,
 	public function new(server) {
 		this.server = server;
 		
-		var trigger = Signal.trigger();
+		final trigger = Signal.trigger();
 		events = trigger;
 		
+		server.errors.handle(e -> trigger.trigger(Errored(e)));
+		
 		server.clientConnected.handle(client -> {
-			var id = counter++;
+			final id = counter++;
 			clients[id] = client;
 			
 			trigger.trigger(GuestConnected(id));
@@ -45,17 +47,17 @@ class WebSocketHostTransport<Command, Message> implements HostTransport<Command,
 		return switch clients[id] {
 			case null: new Error(NotFound, 'Client $id is not connected');
 			case client:
-				var serialized = haxe.Serializer.run(message);
-				var envelope = DownlinkEnvelope.Message(serialized);
-				var json = stringify(envelope);
+				final serialized = haxe.Serializer.run(message);
+				final envelope = DownlinkEnvelope.Message(serialized);
+				final json = stringify(envelope);
 				client.send(Text(json)); Noise;
 		}
 	}
 	
 	public function broadcast(message:Message):Promise<Noise> {
-		var serialized = haxe.Serializer.run(message);
-		var envelope = DownlinkEnvelope.Message(serialized);
-		var json = stringify(envelope);
+		final serialized = haxe.Serializer.run(message);
+		final envelope = DownlinkEnvelope.Message(serialized);
+		final json = stringify(envelope);
 		for(client in clients) client.send(Text(json));
 		return Noise;
 	}
@@ -98,9 +100,9 @@ class WebSocketGuestTransport<Command, Message> implements GuestTransport<Comman
 	}
 	
 	public function sendToHost(command:Command):Promise<Noise> {
-		var serialized = haxe.Serializer.run(command);
-		var envelope = UplinkEnvelope.Command(serialized);
-		var json = stringify(envelope);
+		final serialized = haxe.Serializer.run(command);
+		final envelope = UplinkEnvelope.Command(serialized);
+		final json = stringify(envelope);
 		client.send(Text(json));
 		return Noise;
 	}

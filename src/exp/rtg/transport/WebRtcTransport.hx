@@ -16,7 +16,7 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 	public final id:Future<String>;
 	
 	final peer:Peer;
-	final connections:Map<Int, Connection> = new Map();
+	final connections:Map<Int, DataConnection> = new Map();
 	
 	var count = 0;
 	
@@ -27,7 +27,9 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 		final trigger = Signal.trigger();
 		events = trigger;
 		
-		peer.on('connection', (conn:Connection) -> {
+		peer.on('error', e -> trigger.trigger(Errored(Error.ofJsError(e))));
+		
+		peer.on('connection', (conn:DataConnection) -> {
 			final id = count++;
 			connections[id] = conn;
 			
@@ -47,19 +49,21 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 	
 	public function sendToGuest(id:Int, message:Message):Promise<Noise> {
 		return switch connections[id] {
-			case null: new Error(NotFound, 'Client $id is not connected');
+			case null:
+				new Error(NotFound, 'Client $id is not connected');
 			case conn:
-				var serialized = haxe.Serializer.run(message);
-				var envelope = DownlinkEnvelope.Message(serialized);
-				var json = stringify(envelope);
-				conn.send(json); Noise;
+				final serialized = haxe.Serializer.run(message);
+				final envelope = DownlinkEnvelope.Message(serialized);
+				final json = stringify(envelope);
+				conn.send(json);
+				Noise;
 		}
 	}
 	
 	public function broadcast(message:Message):Promise<Noise> {
-		var serialized = haxe.Serializer.run(message);
-		var envelope = DownlinkEnvelope.Message(serialized);
-		var json = stringify(envelope);
+		final serialized = haxe.Serializer.run(message);
+		final envelope = DownlinkEnvelope.Message(serialized);
+		final json = stringify(envelope);
 		for(conn in connections) conn.send(json);
 		return Noise;
 	}
@@ -71,21 +75,22 @@ class WebRtcGuestTransport<Command, Message> implements GuestTransport<Command, 
 	public final events:Signal<GuestEvent<Message>>;
 	
 	final trigger:SignalTrigger<GuestEvent<Message>>;
-	final peer:Future<Peer>;
+	final opt:{};
 	final hostId:String;
-	var conn:Connection;
+	var conn:DataConnection;
 	
 	public function new(opt, hostId:String) {
-		var peer = new Peer(opt);
-		this.peer = Future.async(cb -> peer.on('open', cb.bind(peer)));
+		this.opt = opt;
 		this.hostId = hostId;
 		events = trigger = Signal.trigger();
 	}
 	
 	public function connect():Promise<Noise> {
 		return new Promise((resolve, reject) -> {
-			peer.handle(peer -> {
+			final peer = new Peer(opt, hostId);
+			peer.on('open', () -> {
 				conn = peer.connect(hostId);
+				conn.on('error', e -> trigger.trigger(Errored(Error.ofJsError(e))));
 				conn.on('open', resolve.bind(Noise));
 				conn.on('data', (data:String) -> {
 					switch parse((data:DownlinkEnvelope)) {
@@ -99,13 +104,14 @@ class WebRtcGuestTransport<Command, Message> implements GuestTransport<Command, 
 	}
 	
 	public function disconnect():Promise<Noise> {
-		return new Error(NotImplemented, 'Not implemented');
+		conn.close();
+		return Noise;
 	}
 	
 	public function sendToHost(command:Command):Promise<Noise> {
-		var serialized = haxe.Serializer.run(command);
-		var envelope = UplinkEnvelope.Command(serialized);
-		var json = stringify(envelope);
+		final serialized = haxe.Serializer.run(command);
+		final envelope = UplinkEnvelope.Command(serialized);
+		final json = stringify(envelope);
 		conn.send(json);
 		return Noise;
 	}
@@ -124,11 +130,12 @@ private enum DownlinkEnvelope {
 @:native('Peer')
 private extern class Peer {
 	function new(?opt:{});
-	function connect(id:String):Connection;
+	function connect(id:String):DataConnection;
 	function on(event:String, f:Function):Void;
 }
 
-private extern class Connection {
+private extern class DataConnection {
 	function on(event:String, f:Function):Void;
 	function send(msg:String):Void;
+	function close():Void;
 }

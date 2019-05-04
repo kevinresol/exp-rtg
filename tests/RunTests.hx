@@ -86,7 +86,7 @@ class MockHostTransport implements HostTransport<Command, Message> {
 						guest.eventsTrigger.trigger(Disonnected);
 					}
 				}
-			case CommandReceived(id, command):
+			case _ :
 		});
 	}
 	
