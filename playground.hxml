@@ -1,0 +1,10 @@
+-cp tests
+-main Playground
+-js bin/playground.js
+-dce full
+
+-lib rtg
+-lib hxnodejs
+-lib tink_state
+-lib tink_websocket
+-lib tink_json

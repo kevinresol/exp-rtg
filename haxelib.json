@@ -1,0 +1,16 @@
+{
+  "name": "exp-rtg",
+  "license": "MIT",
+  "tags": [
+    "real time"
+  ],
+  "classPath": "src",
+  "contributors": [
+    "kevinresol"
+  ],
+  "releasenote": "initial release",
+  "version": "0.0.0",
+  "dependencies": {
+    "tink_state": ""
+  }
+}

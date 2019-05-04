@@ -1,0 +1,5 @@
+package rtg;
+
+class Player {
+	
+}
