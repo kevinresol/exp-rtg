@@ -25,7 +25,7 @@ class WebSocketHostTransport<Command, Message> implements HostTransport<Command,
 			var id = counter++;
 			clients[id] = client;
 			
-			trigger.trigger(PlayerConnected(id));
+			trigger.trigger(GuestConnected(id));
 			
 			client.send(Text(stringify(DownlinkEnvelope.Connected(id))));
 			
@@ -37,11 +37,11 @@ class WebSocketHostTransport<Command, Message> implements HostTransport<Command,
 				case _:
 			});
 			
-			client.closed.handle(_ -> trigger.trigger(PlayerDisonnected(id)));
+			client.closed.handle(_ -> trigger.trigger(GuestDisonnected(id)));
 		});
 	}
 	
-	public function sendToPlayer(id:Int, message:Message):Promise<Noise> {
+	public function sendToGuest(id:Int, message:Message):Promise<Noise> {
 		return switch clients[id] {
 			case null: new Error(NotFound, 'Client $id is not connected');
 			case client:
@@ -63,11 +63,11 @@ class WebSocketHostTransport<Command, Message> implements HostTransport<Command,
 	
 }
 
-class WebSocketPlayerTransport<Command, Message> implements PlayerTransport<Command, Message> {
-	public final events:Signal<PlayerEvent<Message>>;
+class WebSocketGuestTransport<Command, Message> implements GuestTransport<Command, Message> {
+	public final events:Signal<GuestEvent<Message>>;
 	
 	final getClient:Void->Client;
-	final trigger:SignalTrigger<PlayerEvent<Message>>;
+	final trigger:SignalTrigger<GuestEvent<Message>>;
 	
 	var client:Client;
 	var binding:CallbackLink;

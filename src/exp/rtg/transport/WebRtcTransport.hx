@@ -31,7 +31,7 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 			final id = count++;
 			connections[id] = conn;
 			
-			trigger.trigger(PlayerConnected(id));
+			trigger.trigger(GuestConnected(id));
 			conn.send(stringify(DownlinkEnvelope.Connected(id)));
 			
 			conn.on('data', (data:String) -> {
@@ -41,11 +41,11 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 				}
 			});
 			
-			conn.on('close', trigger.trigger.bind(PlayerDisonnected(id)));
+			conn.on('close', trigger.trigger.bind(GuestDisonnected(id)));
 		});
 	}
 	
-	public function sendToPlayer(id:Int, message:Message):Promise<Noise> {
+	public function sendToGuest(id:Int, message:Message):Promise<Noise> {
 		return switch connections[id] {
 			case null: new Error(NotFound, 'Client $id is not connected');
 			case conn:
@@ -67,10 +67,10 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 	
 }
 
-class WebRtcPlayerTransport<Command, Message> implements PlayerTransport<Command, Message> {
-	public final events:Signal<PlayerEvent<Message>>;
+class WebRtcGuestTransport<Command, Message> implements GuestTransport<Command, Message> {
+	public final events:Signal<GuestEvent<Message>>;
 	
-	final trigger:SignalTrigger<PlayerEvent<Message>>;
+	final trigger:SignalTrigger<GuestEvent<Message>>;
 	final peer:Future<Peer>;
 	final hostId:String;
 	var conn:Connection;

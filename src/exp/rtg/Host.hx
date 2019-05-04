@@ -8,11 +8,11 @@ using tink.CoreApi;
 
 class Host<Command, Message> {
 	
-	public final players:Players<Command, Message>;
+	public final guests:Guests<Command, Message>;
 	public final transport:HostTransport<Command, Message>;
 	
 	public function new(transport) {
-		players = new Players(transport);
+		guests = new Guests(transport);
 		
 		this.transport = transport;
 	}
@@ -22,12 +22,12 @@ class Host<Command, Message> {
 	}
 }
 
-class Players<Command, Message> extends ObservableArray<ConnectedPlayer<Command, Message>> {
-	public final connected:Signal<ConnectedPlayer<Command, Message>>;
-	public final disconnected:Signal<ConnectedPlayer<Command, Message>>;
+class Guests<Command, Message> extends ObservableArray<ConnectedGuest<Command, Message>> {
+	public final connected:Signal<ConnectedGuest<Command, Message>>;
+	public final disconnected:Signal<ConnectedGuest<Command, Message>>;
 	
-	final _connected:SignalTrigger<ConnectedPlayer<Command, Message>>;
-	final _disconnected:SignalTrigger<ConnectedPlayer<Command, Message>>;
+	final _connected:SignalTrigger<ConnectedGuest<Command, Message>>;
+	final _disconnected:SignalTrigger<ConnectedGuest<Command, Message>>;
 	final transport:HostTransport<Command, Message>;
 	
 	public function new(transport) {
@@ -39,8 +39,8 @@ class Players<Command, Message> extends ObservableArray<ConnectedPlayer<Command,
 		disconnected = _disconnected = Signal.trigger();
 		
 		transport.events.handle(function(e) switch e {
-			case PlayerConnected(id): connect(id);
-			case PlayerDisonnected(id): disconnect(id);
+			case GuestConnected(id): connect(id);
+			case GuestDisonnected(id): disconnect(id);
 			case CommandReceived(id, command):
 		});
 		
@@ -52,21 +52,21 @@ class Players<Command, Message> extends ObservableArray<ConnectedPlayer<Command,
 	}
 	
 	public function connect(id:Int) {
-		push(new ConnectedPlayer(id, transport));
+		push(new ConnectedGuest(id, transport));
 	}
 	
 	public function disconnect(id:Int) {
 		var i = length;
 		while(i-- > 0) {
-			var player = items[i];
-			if(player.id == id) splice(i, 1);
+			var guest = items[i];
+			if(guest.id == id) splice(i, 1);
 		}
 	}
 }
 
 
 @:allow(rtg)
-class ConnectedPlayer<Command, Message> {
+class ConnectedGuest<Command, Message> {
 	public final id:Int;
 	public final disconnected:Future<Noise>;
 	public final commandReceived:Signal<Command>;
@@ -77,7 +77,7 @@ class ConnectedPlayer<Command, Message> {
 		this.id = id;
 		this.transport = transport;
 		this.disconnected = transport.events.select(event -> switch event {
-			case PlayerDisonnected(id) if(this.id == id): Some(Noise);
+			case GuestDisonnected(id) if(this.id == id): Some(Noise);
 			case _: None;
 		}).nextTime();
 		this.commandReceived = transport.events.select(event -> switch event {
@@ -87,7 +87,7 @@ class ConnectedPlayer<Command, Message> {
 	}
 	
 	public inline function send(message:Message):Promise<Noise> {
-		return transport.sendToPlayer(id, message);
+		return transport.sendToGuest(id, message);
 	}
 	
 }

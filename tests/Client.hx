@@ -8,7 +8,7 @@ using tink.CoreApi;
 
 class Client {
 	static function main() {
-		var transport = new WebSocketPlayerTransport(() -> new tink.websocket.Client(new JsConnector('ws://localhost:8134')));
+		var transport = new WebSocketGuestTransport(() -> new tink.websocket.Client(new JsConnector('ws://localhost:8134')));
 		
 		transport.connect()
 			.handle(o -> {

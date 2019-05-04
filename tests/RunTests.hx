@@ -29,31 +29,31 @@ class RunTests {
 		
 		var connected = false;
 		
-		host.players.connected.handle(player -> {
+		host.guests.connected.handle(guest -> {
 			connected = true;
-			var gamePlayer = game.createPlayer(player.id);
-			player.commandReceived.handle(command -> switch command {
-				case SetSpeed(v): gamePlayer.speed.set(v);
+			var gameGuest = game.createGuest(guest.id);
+			guest.commandReceived.handle(command -> switch command {
+				case SetSpeed(v): gameGuest.speed.set(v);
 			});
-			player.disconnected.handle(_ -> game.removePlayer(player.id));
+			guest.disconnected.handle(_ -> game.removeGuest(guest.id));
 		});
 		
-		asserts.assert(host.players.length == 0);
-		var playerTransport = new MockPlayerTransport(hostTransport);
-		playerTransport.connect()
+		asserts.assert(host.guests.length == 0);
+		var guestTransport = new MockGuestTransport(hostTransport);
+		guestTransport.connect()
 			.next(_ -> {
 				asserts.assert(connected);
-				asserts.assert(host.players.length == 1);
-				asserts.assert(game.players.length == 1);
-				asserts.assert(game.players[0].pos == 0);
-				playerTransport.sendToHost(SetSpeed(1));
+				asserts.assert(host.guests.length == 1);
+				asserts.assert(game.guests.length == 1);
+				asserts.assert(game.guests[0].pos == 0);
+				guestTransport.sendToHost(SetSpeed(1));
 				game.update();
-				asserts.assert(game.players[0].pos == 1);
-				playerTransport.disconnect();
+				asserts.assert(game.guests[0].pos == 1);
+				guestTransport.disconnect();
 			})
 			.next(_ -> {
-				asserts.assert(host.players.length == 0);
-				asserts.assert(game.players.length == 0);
+				asserts.assert(host.guests.length == 0);
+				asserts.assert(game.guests.length == 0);
 				Noise;
 			})
 			.handle(asserts.handle);
@@ -67,51 +67,51 @@ class RunTests {
 class MockHostTransport implements HostTransport<Command, Message> {
 	public final events:Signal<HostEvent<Command>>;
 	public final eventsTrigger:SignalTrigger<HostEvent<Command>>;
-	public final players:Array<MockPlayerTransport>;
+	public final guests:Array<MockGuestTransport>;
 	
 	var count:Int = 0;
 	
 	public function new() {
-		players = [];
+		guests = [];
 		events = eventsTrigger = Signal.trigger();
 		
 		events.handle(function(e) switch e {
-			case PlayerConnected(id):
-				players.push(MockPlayerTransport.list[id]);
-			case PlayerDisonnected(id):
-				for(i in 0...players.length) {
-					var player = players[i];
-					if(player.id == id) {
-						players.splice(i, 1);
-						player.eventsTrigger.trigger(Disonnected);
+			case GuestConnected(id):
+				guests.push(MockGuestTransport.list[id]);
+			case GuestDisonnected(id):
+				for(i in 0...guests.length) {
+					var guest = guests[i];
+					if(guest.id == id) {
+						guests.splice(i, 1);
+						guest.eventsTrigger.trigger(Disonnected);
 					}
 				}
 			case CommandReceived(id, command):
 		});
 	}
 	
-	public function sendToPlayer(id:Int, message:Message):Promise<Noise> {
-		return switch players.find(player -> player.id == id) {
+	public function sendToGuest(id:Int, message:Message):Promise<Noise> {
+		return switch guests.find(guest -> guest.id == id) {
 			case null:
-				new Error(NotFound, 'Player $id not found');
-			case player:
-				player.eventsTrigger.trigger(MessageReceived(message));
+				new Error(NotFound, 'Guest $id not found');
+			case guest:
+				guest.eventsTrigger.trigger(MessageReceived(message));
 				Noise;
 		}
 	}
 	
 	public function broadcast(message:Message):Promise<Noise> {
-		for(player in players) player.eventsTrigger.trigger(MessageReceived(message));
+		for(guest in guests) guest.eventsTrigger.trigger(MessageReceived(message));
 		return Noise;
 	}
 }
 
-class MockPlayerTransport implements PlayerTransport<Command, Message> {
-	public static var list:Array<MockPlayerTransport> = [];
+class MockGuestTransport implements GuestTransport<Command, Message> {
+	public static var list:Array<MockGuestTransport> = [];
 	static var count:Int = 0;
 	
-	public final events:Signal<PlayerEvent<Message>>;
-	public final eventsTrigger:SignalTrigger<PlayerEvent<Message>>;
+	public final events:Signal<GuestEvent<Message>>;
+	public final eventsTrigger:SignalTrigger<GuestEvent<Message>>;
 	public var id(default, null):Int;
 	final host:MockHostTransport;
 	
@@ -128,13 +128,13 @@ class MockPlayerTransport implements PlayerTransport<Command, Message> {
 	public function connect():Promise<Noise> {
 		if(connected) return new Error('Already connected');
 		connected = true;
-		host.eventsTrigger.trigger(PlayerConnected(id));
+		host.eventsTrigger.trigger(GuestConnected(id));
 		return Noise;
 	}
 	public function disconnect():Promise<Noise> {
 		if(!connected) return new Error('Not connected');
 		connected = false;
-		host.eventsTrigger.trigger(PlayerDisonnected(id));
+		host.eventsTrigger.trigger(GuestDisonnected(id));
 		return Noise;
 		
 	}
@@ -153,7 +153,7 @@ enum Message {
 	
 }
 
-class GamePlayer {
+class GameGuest {
 	public final id:Int;
 	public final speed:State<Int> = new State(0);
 	public var pos:Int = 0;
@@ -165,27 +165,27 @@ class GamePlayer {
 
 class Game {
 	
-	public final players:Array<GamePlayer> = [];
+	public final guests:Array<GameGuest> = [];
 	
 	public function new() {
 		
 	}
 	
 	public function update() {
-		for(player in players) player.pos += player.speed.value;
+		for(guest in guests) guest.pos += guest.speed.value;
 	}
 	
-	public function createPlayer(id:Int) {
-		var player = new GamePlayer(id);
-		players.push(player);
-		return player;
+	public function createGuest(id:Int) {
+		var guest = new GameGuest(id);
+		guests.push(guest);
+		return guest;
 	}
 	
-	public function removePlayer(id:Int) {
-		var i = players.length;
+	public function removeGuest(id:Int) {
+		var i = guests.length;
 		while(i-- > 0) {
-			var player = players[i];
-			if(player.id == id) players.splice(i, 1);
+			var guest = guests[i];
+			if(guest.id == id) guests.splice(i, 1);
 		}
 	}
 }

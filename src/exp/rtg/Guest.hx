@@ -1,5 +1,5 @@
 package exp.rtg;
 
-class Player {
+class Guest {
 	
 }

@@ -12,24 +12,24 @@ class Playground {
 		
 		var game = new Game();
 		
-		host.players.connected.handle(player -> {
-			var gamePlayer = game.createPlayer(player.id);
-			trace('player ${player.id} connected');
-			player.commandReceived.handle(command -> switch command {
-				case ChangeDirection(dir): gamePlayer.direction.set(dir);
+		host.guests.connected.handle(guest -> {
+			var gameGuest = game.createGuest(guest.id);
+			trace('guest ${guest.id} connected');
+			guest.commandReceived.handle(command -> switch command {
+				case ChangeDirection(dir): gameGuest.direction.set(dir);
 			});
-			player.disconnected.handle(_ -> game.removePlayer(player.id));
+			guest.disconnected.handle(_ -> game.removeGuest(guest.id));
 		});
 		
 		new haxe.Timer(16).run = function() {
 			game.update(16/1000);
-			for(player in game.players) trace(player.id, player.x, player.y);
+			for(guest in game.guests) trace(guest.id, guest.x, guest.y);
 		}
 	}
 }
 
 
-class GamePlayer {
+class GameGuest {
 	public final id:Int;
 	public final direction:State<Direction> = new State(North);
 	public var x:Float = 0;
@@ -42,34 +42,34 @@ class GamePlayer {
 
 class Game {
 	
-	public final players:Array<GamePlayer> = [];
+	public final guests:Array<GameGuest> = [];
 	
 	public function new() {
 		
 	}
 	
 	public function update(dt:Float) {
-		for(player in players) {
-			switch player.direction.value {
-				case North: player.y -= dt;
-				case South: player.y += dt;
-				case East: player.x += dt;
-				case West: player.x -= dt;
+		for(guest in guests) {
+			switch guest.direction.value {
+				case North: guest.y -= dt;
+				case South: guest.y += dt;
+				case East: guest.x += dt;
+				case West: guest.x -= dt;
 			}
 		}
 	}
 	
-	public function createPlayer(id:Int) {
-		var player = new GamePlayer(id);
-		players.push(player);
-		return player;
+	public function createGuest(id:Int) {
+		var guest = new GameGuest(id);
+		guests.push(guest);
+		return guest;
 	}
 	
-	public function removePlayer(id:Int) {
-		var i = players.length;
+	public function removeGuest(id:Int) {
+		var i = guests.length;
 		while(i-- > 0) {
-			var player = players[i];
-			if(player.id == id) players.splice(i, 1);
+			var guest = guests[i];
+			if(guest.id == id) guests.splice(i, 1);
 		}
 	}
 }
