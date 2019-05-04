@@ -7,6 +7,10 @@ import tink.Json.*;
 
 using tink.CoreApi;
 
+/**
+ * Add this to html:
+ * <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
+ */
 class WebSocketHostTransport<Command, Message> implements HostTransport<Command, Message> {
 	public final events:Signal<HostEvent<Command>>;
 	
