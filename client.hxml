@@ -3,7 +3,7 @@
 -js bin/client.js
 -dce full
 
--lib rtg
+-lib exp-rtg
 -lib tink_state
 -lib tink_websocket
 -lib tink_json

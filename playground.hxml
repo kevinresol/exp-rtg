@@ -3,7 +3,7 @@
 -js bin/playground.js
 -dce full
 
--lib rtg
+-lib exp-rtg
 -lib hxnodejs
 -lib tink_state
 -lib tink_websocket
