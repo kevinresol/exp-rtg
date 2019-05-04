@@ -107,11 +107,11 @@ class WebSocketPlayerTransport<Command, Message> implements PlayerTransport<Comm
 }
 
 
-enum UplinkEnvelope {  // TODO: Type-parametrize and serialize with tink_json
+private enum UplinkEnvelope {  // TODO: Type-parametrize and serialize with tink_json
 	Command(command:String);
 }
 
-enum DownlinkEnvelope {
+private enum DownlinkEnvelope {
 	Connected(id:Int);  // TODO: Type-parametrize and serialize with tink_json
 	Message(message:String);
 }
