@@ -135,7 +135,6 @@ class MockPlayerTransport implements PlayerTransport<Command, Message> {
 		if(!connected) return new Error('Not connected');
 		connected = false;
 		host.eventsTrigger.trigger(PlayerDisonnected(id));
-		id = null;
 		return Noise;
 		
 	}
