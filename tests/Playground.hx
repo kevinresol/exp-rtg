@@ -1,7 +1,7 @@
 package;
 
-import rtg.*;
-import rtg.transport.WebSocketTransport;
+import exp.rtg.*;
+import exp.rtg.transport.WebSocketTransport;
 import tink.state.*;
 import tink.websocket.servers.*;
 import Command;

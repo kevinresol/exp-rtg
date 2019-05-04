@@ -1,4 +1,4 @@
-package rtg;
+package exp.rtg;
 
 class Player {
 	

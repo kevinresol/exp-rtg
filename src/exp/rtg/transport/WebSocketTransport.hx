@@ -1,6 +1,6 @@
-package rtg.transport;
+package exp.rtg.transport;
 
-import rtg.Transport;
+import exp.rtg.Transport;
 import tink.websocket.Server;
 import tink.websocket.Client;
 import tink.Json.*;

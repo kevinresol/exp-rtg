@@ -3,8 +3,8 @@ package ;
 import tink.unit.*;
 import tink.testrunner.*;
 import tink.state.*;
-import rtg.*;
-import rtg.Transport;
+import exp.rtg.*;
+import exp.rtg.Transport;
 
 using tink.CoreApi;
 using Lambda;
