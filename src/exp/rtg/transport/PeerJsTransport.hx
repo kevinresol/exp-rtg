@@ -2,7 +2,6 @@ package exp.rtg.transport;
 
 import haxe.Constraints;
 import exp.rtg.Transport;
-import tink.Json.*;
 
 using tink.CoreApi;
 
@@ -10,7 +9,11 @@ using tink.CoreApi;
  * Add this to html:
  * <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
  */
-class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Message> {
+ 
+@:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.PeerJsTransport.PeerJsHostTransportBase))
+class PeerJsHostTransport<Command, Message> {}
+
+class PeerJsHostTransportBase<Command, Message> extends StringTransport<Command, Message> implements HostTransport<Command, Message> {
 	public final events:Signal<HostEvent<Command>>;
 	
 	public final id:Future<String>;
@@ -34,11 +37,11 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 			connections[id] = conn;
 			
 			trigger.trigger(GuestConnected(id));
-			conn.send(stringify(DownlinkEnvelope.Connected(id)));
+			conn.send(stringifyDownlink(Connected(id)));
 			
 			conn.on('data', (data:String) -> {
-				switch parse((data:UplinkEnvelope)) {
-					case Success(Command(command)): trigger.trigger(CommandReceived(id, haxe.Unserializer.run(command)));
+				switch parseUplink(data) {
+					case Success(Command(command)): trigger.trigger(CommandReceived(id, command));
 					case Failure(_): 
 				}
 			});
@@ -52,18 +55,13 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 			case null:
 				new Error(NotFound, 'Client $id is not connected');
 			case conn:
-				final serialized = haxe.Serializer.run(message);
-				final envelope = DownlinkEnvelope.Message(serialized);
-				final json = stringify(envelope);
-				conn.send(json);
+				conn.send(stringifyDownlink(Message(message)));
 				Noise;
 		}
 	}
 	
 	public function broadcast(message:Message):Promise<Noise> {
-		final serialized = haxe.Serializer.run(message);
-		final envelope = DownlinkEnvelope.Message(serialized);
-		final json = stringify(envelope);
+		final json = stringifyDownlink(Message(message));
 		for(conn in connections) conn.send(json);
 		return Noise;
 	}
@@ -71,7 +69,10 @@ class WebRtcHostTransport<Command, Message> implements HostTransport<Command, Me
 	
 }
 
-class WebRtcGuestTransport<Command, Message> implements GuestTransport<Command, Message> {
+@:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.PeerJsTransport.PeerJsGuestTransportBase))
+class PeerJsGuestTransport<Command, Message> {}
+
+class PeerJsGuestTransportBase<Command, Message> extends StringTransport<Command, Message> implements GuestTransport<Command, Message> {
 	public final events:Signal<GuestEvent<Message>>;
 	
 	final trigger:SignalTrigger<GuestEvent<Message>>;
@@ -87,15 +88,15 @@ class WebRtcGuestTransport<Command, Message> implements GuestTransport<Command, 
 	
 	public function connect():Promise<Noise> {
 		return new Promise((resolve, reject) -> {
-			final peer = new Peer(opt, hostId);
+			final peer = new Peer(opt);
 			peer.on('open', () -> {
 				conn = peer.connect(hostId);
 				conn.on('error', e -> trigger.trigger(Errored(Error.ofJsError(e))));
 				conn.on('open', resolve.bind(Noise));
 				conn.on('data', (data:String) -> {
-					switch parse((data:DownlinkEnvelope)) {
+					switch parseDownlink(data) {
 						case Success(Connected(_)): resolve(Noise);
-						case Success(Message(message)): trigger.trigger(MessageReceived(haxe.Unserializer.run(message)));
+						case Success(Message(message)): trigger.trigger(MessageReceived(message));
 						case Failure(_):
 					}
 				});
@@ -109,22 +110,9 @@ class WebRtcGuestTransport<Command, Message> implements GuestTransport<Command, 
 	}
 	
 	public function sendToHost(command:Command):Promise<Noise> {
-		final serialized = haxe.Serializer.run(command);
-		final envelope = UplinkEnvelope.Command(serialized);
-		final json = stringify(envelope);
-		conn.send(json);
+		conn.send(stringifyUplink(Command(command)));
 		return Noise;
 	}
-}
-
-
-private enum UplinkEnvelope {  // TODO: Type-parametrize and serialize with tink_json
-	Command(command:String);
-}
-
-private enum DownlinkEnvelope {
-	Connected(id:Int);  // TODO: Type-parametrize and serialize with tink_json
-	Message(message:String);
 }
 
 @:native('Peer')

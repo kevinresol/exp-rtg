@@ -29,3 +29,20 @@ enum GuestEvent<Message> {
 	MessageReceived(message:Message);
 	Errored(error:Error);
 }
+
+class StringTransport<Command, Message> {
+	function stringifyDownlink(down:DownlinkEnvelope<Message>):String throw 'abstract';
+	function stringifyUplink(up:UplinkEnvelope<Command>):String throw 'abstract';
+	function parseDownlink(s:String):Outcome<DownlinkEnvelope<Message>, Error> throw 'abstract';
+	function parseUplink(s:String):Outcome<UplinkEnvelope<Command>, Error> throw 'abstract';
+}
+
+
+enum UplinkEnvelope<Command> {
+	Command(command:Command);
+}
+
+enum DownlinkEnvelope<Message> {
+	Connected(id:Int);
+	Message(message:Message);
+}

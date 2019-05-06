@@ -8,7 +8,7 @@ import Command;
 
 class Playground {
 	static function main() {
-		var host = new Host<Command, Message>(new WebSocketHostTransport(new NodeWsServer({port: 8134})));
+		var host = new Host<Command, Message>(new WebSocketHostTransport<Command, Message>(new NodeWsServer({port: 8134})));
 		
 		var game = new Game();
 		
