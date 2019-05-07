@@ -13,7 +13,7 @@ using tink.CoreApi;
 @:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.PeerJsTransport.PeerJsHostTransportBase))
 class PeerJsHostTransport<Command, Message> {}
 
-class PeerJsHostTransportBase<Command, Message> extends StringTransport<Command, Message> implements HostTransport<Command, Message> {
+class PeerJsHostTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements HostTransport<Command, Message> {
 	public final events:Signal<HostEvent<Command>>;
 	
 	public final id:Future<String>;
@@ -37,12 +37,13 @@ class PeerJsHostTransportBase<Command, Message> extends StringTransport<Command,
 			connections[id] = conn;
 			
 			trigger.trigger(GuestConnected(id));
-			conn.send(stringifyDownlink(Connected(id)));
+			conn.send(stringifyDownlink(Meta(Connected(id))));
 			
 			conn.on('data', (data:String) -> {
 				switch parseUplink(data) {
+					case Success(Meta(_)): // unused
 					case Success(Command(command)): trigger.trigger(CommandReceived(id, command));
-					case Failure(_): 
+					case Failure(e): trace(e);
 				}
 			});
 			
@@ -65,14 +66,12 @@ class PeerJsHostTransportBase<Command, Message> extends StringTransport<Command,
 		for(conn in connections) conn.send(json);
 		return Noise;
 	}
-	
-	
 }
 
 @:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.PeerJsTransport.PeerJsGuestTransportBase))
 class PeerJsGuestTransport<Command, Message> {}
 
-class PeerJsGuestTransportBase<Command, Message> extends StringTransport<Command, Message> implements GuestTransport<Command, Message> {
+class PeerJsGuestTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements GuestTransport<Command, Message> {
 	public final events:Signal<GuestEvent<Message>>;
 	
 	final trigger:SignalTrigger<GuestEvent<Message>>;
@@ -95,9 +94,9 @@ class PeerJsGuestTransportBase<Command, Message> extends StringTransport<Command
 				conn.on('open', resolve.bind(Noise));
 				conn.on('data', (data:String) -> {
 					switch parseDownlink(data) {
-						case Success(Connected(_)): resolve(Noise);
+						case Success(Meta(Connected(_))): resolve(Noise);
 						case Success(Message(message)): trigger.trigger(MessageReceived(message));
-						case Failure(_):
+						case Failure(e): trace(e);
 					}
 				});
 			});
@@ -126,4 +125,8 @@ private extern class DataConnection {
 	function on(event:String, f:Function):Void;
 	function send(msg:String):Void;
 	function close():Void;
+}
+
+private enum DownlinkMeta {
+	Connected(id:Int);
 }

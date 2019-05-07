@@ -30,19 +30,20 @@ enum GuestEvent<Message> {
 	Errored(error:Error);
 }
 
-class StringTransport<Command, Message> {
-	function stringifyDownlink(down:DownlinkEnvelope<Message>):String throw 'abstract';
-	function stringifyUplink(up:UplinkEnvelope<Command>):String throw 'abstract';
-	function parseDownlink(s:String):Outcome<DownlinkEnvelope<Message>, Error> throw 'abstract';
-	function parseUplink(s:String):Outcome<UplinkEnvelope<Command>, Error> throw 'abstract';
+class StringTransport<UplinkMeta, DownlinkMeta, Command, Message> {
+	function stringifyDownlink(down:DownlinkEnvelope<DownlinkMeta, Message>):String throw 'abstract';
+	function stringifyUplink(up:UplinkEnvelope<UplinkMeta, Command>):String throw 'abstract';
+	function parseDownlink(s:String):Outcome<DownlinkEnvelope<DownlinkMeta, Message>, Error> throw 'abstract';
+	function parseUplink(s:String):Outcome<UplinkEnvelope<UplinkMeta, Command>, Error> throw 'abstract';
 }
 
 
-enum UplinkEnvelope<Command> {
+enum UplinkEnvelope<Meta, Command> {
+	Meta(meta:Meta);
 	Command(command:Command);
 }
 
-enum DownlinkEnvelope<Message> {
-	Connected(id:Int);
+enum DownlinkEnvelope<Meta, Message> {
+	Meta(meta:Meta);
 	Message(message:Message);
 }

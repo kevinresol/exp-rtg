@@ -15,7 +15,7 @@ using tink.CoreApi;
 @:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.SimplePeerTransport.SimplePeerHostTransportBase))
 class SimplePeerHostTransport<Command, Message> {}
 
-class SimplePeerHostTransportBase<Command, Message> extends StringTransport<Command, Message> implements HostTransport<Command, Message> {
+class SimplePeerHostTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements HostTransport<Command, Message> {
 	public final events:Signal<HostEvent<Command>>;
 	
 	public final current:Observable<{id:Int, peer:Peer, signal:{}}>;
@@ -55,10 +55,11 @@ class SimplePeerHostTransportBase<Command, Message> extends StringTransport<Comm
 				peers[id] = peer;
 				
 				trigger.trigger(GuestConnected(id));
-				peer.send(stringifyDownlink(Connected(id)));
+				peer.send(stringifyDownlink(Meta(Connected(id))));
 				
 				peer.on('data', (data:Dynamic) -> {
 					switch parseUplink(data.toString()) {
+						case Success(Meta(_)): // unused
 						case Success(Command(command)): trigger.trigger(CommandReceived(id, command));
 						case Failure(_): 
 					}
@@ -97,7 +98,7 @@ class SimplePeerHostTransportBase<Command, Message> extends StringTransport<Comm
 @:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.SimplePeerTransport.SimplePeerGuestTransportBase))
 class SimplePeerGuestTransport<Command, Message> {}
 
-class SimplePeerGuestTransportBase<Command, Message> extends StringTransport<Command, Message> implements GuestTransport<Command, Message> {
+class SimplePeerGuestTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements GuestTransport<Command, Message> {
 	public final events:Signal<GuestEvent<Message>>;
 	
 	final trigger:SignalTrigger<GuestEvent<Message>>;
@@ -123,7 +124,7 @@ class SimplePeerGuestTransportBase<Command, Message> extends StringTransport<Com
 				signaling.destroy();
 				peer.on('data', (data:Dynamic) -> {
 					switch parseDownlink(data.toString()) {
-						case Success(Connected(_)): resolve(Noise);
+						case Success(Meta(Connected(_))): resolve(Noise);
 						case Success(Message(message)): trigger.trigger(MessageReceived(message));
 						case Failure(e): trace(e.data);
 					}
@@ -188,4 +189,8 @@ private extern class Peer {
 	function once(event:String, f:Function):Void;
 	function send(data:String):Void;
 	function destroy():Void;
+}
+
+private enum DownlinkMeta {
+	Connected(id:Int);
 }

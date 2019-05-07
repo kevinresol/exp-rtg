@@ -9,7 +9,7 @@ using tink.CoreApi;
 @:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.WebSocketTransport.WebSocketHostTransportBase))
 class WebSocketHostTransport<Command, Message> {}
 
-class WebSocketHostTransportBase<Command, Message> extends StringTransport<Command, Message> implements HostTransport<Command, Message> {
+class WebSocketHostTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements HostTransport<Command, Message> {
 	public final events:Signal<HostEvent<Command>>;
 	
 	final server:Server;
@@ -31,11 +31,12 @@ class WebSocketHostTransportBase<Command, Message> extends StringTransport<Comma
 			
 			trigger.trigger(GuestConnected(id));
 			
-			client.send(Text(stringifyDownlink(Connected(id))));
+			client.send(Text(stringifyDownlink(Meta(Connected(id)))));
 			
 			client.messageReceived.handle(function(m) switch m {
 				case Text(parseUplink(_) => Success(env)): 
 					switch env {
+						case Meta(_): // unused
 						case Command(command): trigger.trigger(CommandReceived(id, command));
 					}
 				case _:
@@ -65,7 +66,7 @@ class WebSocketHostTransportBase<Command, Message> extends StringTransport<Comma
 @:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.WebSocketTransport.WebSocketGuestTransportBase))
 class WebSocketGuestTransport<Command, Message> {}
 
-class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Command, Message> implements GuestTransport<Command, Message> {
+class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements GuestTransport<Command, Message> {
 	public final events:Signal<GuestEvent<Message>>;
 	
 	final getClient:Void->Client;
@@ -85,7 +86,7 @@ class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Comm
 			binding = client.messageReceived.handle(function(m) switch m {
 				case Text(parseDownlink(_) => Success(env)): 
 					switch env {
-						case Connected(_): resolve(Noise);
+						case Meta(Connected(_)): resolve(Noise);
 						case Message(message): trigger.trigger(MessageReceived(message));
 					}
 				case _:
@@ -103,4 +104,9 @@ class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Comm
 		client.send(Text(stringifyUplink(Command(command))));
 		return Noise;
 	}
+}
+
+
+private enum DownlinkMeta {
+	Connected(id:Int);
 }
