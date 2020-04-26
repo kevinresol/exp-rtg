@@ -25,7 +25,7 @@ enum HostEvent<Command> {
 
 enum GuestEvent<Message> {
 	Connected;
-	Disonnected;
+	Disconnected;
 	MessageReceived(message:Message);
 	Errored(error:Error);
 }

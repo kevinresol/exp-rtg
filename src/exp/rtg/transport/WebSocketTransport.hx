@@ -86,8 +86,11 @@ class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Nois
 			binding = client.messageReceived.handle(function(m) switch m {
 				case Text(parseDownlink(_) => Success(env)): 
 					switch env {
-						case Meta(Connected(_)): resolve(Noise);
-						case Message(message): trigger.trigger(MessageReceived(message));
+						case Meta(Connected(_)):
+							trigger.trigger(Connected);
+							resolve(Noise);
+						case Message(message):
+							trigger.trigger(MessageReceived(message));
 					}
 				case _:
 			});
@@ -97,6 +100,7 @@ class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Nois
 	public function disconnect():Promise<Noise> {
 		binding.dissolve();
 		client.close();
+		trigger.trigger(Disconnected);
 		return Noise;
 	}
 	
