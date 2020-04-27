@@ -83,7 +83,7 @@ class MockHostTransport implements HostTransport<Command, Message> {
 					var guest = guests[i];
 					if(guest.id == id) {
 						guests.splice(i, 1);
-						guest.eventsTrigger.trigger(Disonnected);
+						guest.eventsTrigger.trigger(Disconnected);
 					}
 				}
 			case _ :
