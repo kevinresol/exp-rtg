@@ -6,10 +6,10 @@ import exp.rtg.Transport;
 using Lambda;
 using tink.CoreApi;
 
-class Host<Command, Message> {
+class Host {
 	
-	public final guests:Guests<Command, Message>;
-	public final transport:HostTransport<Command, Message>;
+	public final guests:Guests;
+	public final transport:HostTransport;
 	
 	public function new(transport) {
 		guests = new Guests(transport);
@@ -17,18 +17,18 @@ class Host<Command, Message> {
 		this.transport = transport;
 	}
 	
-	public function broadcast(message:Message):Promise<Noise> {
-		return transport.broadcast(message);
+	public function broadcast(data:Chunk):Promise<Noise> {
+		return transport.broadcast(data);
 	}
 }
 
-class Guests<Command, Message> extends ObservableArray<ConnectedGuest<Command, Message>> {
-	public final connected:Signal<ConnectedGuest<Command, Message>>;
-	public final disconnected:Signal<ConnectedGuest<Command, Message>>;
+class Guests extends ObservableArray<ConnectedGuest> {
+	public final connected:Signal<ConnectedGuest>;
+	public final disconnected:Signal<ConnectedGuest>;
 	
-	final _connected:SignalTrigger<ConnectedGuest<Command, Message>>;
-	final _disconnected:SignalTrigger<ConnectedGuest<Command, Message>>;
-	final transport:HostTransport<Command, Message>;
+	final _connected:SignalTrigger<ConnectedGuest>;
+	final _disconnected:SignalTrigger<ConnectedGuest>;
+	final transport:HostTransport;
 	
 	public function new(transport) {
 		super();
@@ -66,12 +66,12 @@ class Guests<Command, Message> extends ObservableArray<ConnectedGuest<Command, M
 
 
 @:allow(rtg)
-class ConnectedGuest<Command, Message> {
+class ConnectedGuest {
 	public final id:Int;
 	public final disconnected:Future<Noise>;
-	public final commandReceived:Signal<Command>;
+	public final dataReceived:Signal<Chunk>;
 	
-	final transport:HostTransport<Command, Message>;
+	final transport:HostTransport;
 	
 	public function new(id, transport) {
 		this.id = id;
@@ -80,14 +80,14 @@ class ConnectedGuest<Command, Message> {
 			case GuestDisonnected(id) if(this.id == id): Some(Noise);
 			case _: None;
 		}).nextTime();
-		this.commandReceived = transport.events.select(event -> switch event {
-			case CommandReceived(id, command) if(this.id == id): Some(command);
+		this.dataReceived = transport.events.select(event -> switch event {
+			case DataReceived(id, data) if(this.id == id): Some(data);
 			case _: None;
 		});
 	}
 	
-	public inline function send(message:Message):Promise<Noise> {
-		return transport.sendToGuest(id, message);
+	public inline function send(data:Chunk):Promise<Noise> {
+		return transport.sendToGuest(id, data);
 	}
 	
 }

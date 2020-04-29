@@ -1,49 +1,43 @@
 package exp.rtg;
 
+import tink.Chunk;
 using tink.CoreApi;
 
-interface HostTransport<Command, Message> {
-	final events:Signal<HostEvent<Command>>;
-	function sendToGuest(id:Int, message:Message):Promise<Noise>;
-	function broadcast(message:Message):Promise<Noise>;
+interface HostTransport {
+	final events:Signal<HostEvent>;
+	function sendToGuest(id:Int, data:Chunk):Promise<Noise>;
+	function broadcast(data:Chunk):Promise<Noise>;
 }
 
-interface GuestTransport<Command, Message> {
-	final events:Signal<GuestEvent<Message>>;
+interface GuestTransport {
+	final events:Signal<GuestEvent>;
 	function connect():Promise<Noise>;
 	function disconnect():Promise<Noise>;
-	function sendToHost(command:Command):Promise<Noise>;
+	function sendToHost(data:Chunk):Promise<Noise>;
 }
 
 
-enum HostEvent<Command> {
+enum HostEvent {
 	GuestConnected(id:Int);
 	GuestDisonnected(id:Int);
-	CommandReceived(id:Int, command:Command);
+	DataReceived(id:Int, data:Chunk);
 	Errored(error:Error);
 }
 
-enum GuestEvent<Message> {
+enum GuestEvent {
 	Connected;
 	Disconnected;
-	MessageReceived(message:Message);
+	DataReceived(data:Chunk);
 	Errored(error:Error);
 }
 
-class StringTransport<UplinkMeta, DownlinkMeta, Command, Message> {
-	function stringifyDownlink(down:DownlinkEnvelope<DownlinkMeta, Message>):String throw 'abstract';
-	function stringifyUplink(up:UplinkEnvelope<UplinkMeta, Command>):String throw 'abstract';
-	function parseDownlink(s:String):Outcome<DownlinkEnvelope<DownlinkMeta, Message>, Error> throw 'abstract';
-	function parseUplink(s:String):Outcome<UplinkEnvelope<UplinkMeta, Command>, Error> throw 'abstract';
+
+enum UplinkEnvelope<Meta> {
+	Metadata(meta:Meta);
+	Data(v:Chunk);
 }
 
-
-enum UplinkEnvelope<Meta, Command> {
-	Meta(meta:Meta);
-	Command(command:Command);
-}
-
-enum DownlinkEnvelope<Meta, Message> {
-	Meta(meta:Meta);
-	Message(message:Message);
+enum DownlinkEnvelope<Meta> {
+	Metadata(meta:Meta);
+	Data(v:Chunk);
 }

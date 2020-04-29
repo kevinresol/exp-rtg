@@ -3,6 +3,7 @@ package ;
 import tink.unit.*;
 import tink.testrunner.*;
 import tink.state.*;
+import tink.Chunk;
 import exp.rtg.*;
 import exp.rtg.Transport;
 
@@ -23,7 +24,7 @@ class RunTests {
 	public function test() {
 	
 		var hostTransport = new MockHostTransport();
-		var host = new Host<Command, Message>(hostTransport);
+		var host = new Host(hostTransport);
 		
 		var game = new Game();
 		
@@ -32,8 +33,9 @@ class RunTests {
 		host.guests.connected.handle(guest -> {
 			connected = true;
 			var gameGuest = game.createGuest(guest.id);
-			guest.commandReceived.handle(command -> switch command {
-				case SetSpeed(v): gameGuest.speed.set(v);
+			guest.dataReceived.handle(data -> switch tink.Json.parse((data:Command)) {
+				case Success(SetSpeed(v)): gameGuest.speed.set(v);
+				case Failure(e): trace(e);
 			});
 			guest.disconnected.handle(_ -> game.removeGuest(guest.id));
 		});
@@ -46,7 +48,7 @@ class RunTests {
 				asserts.assert(host.guests.length == 1);
 				asserts.assert(game.guests.length == 1);
 				asserts.assert(game.guests[0].pos == 0);
-				guestTransport.sendToHost(SetSpeed(1));
+				guestTransport.sendToHost(tink.Json.stringify(SetSpeed(1)));
 				game.update();
 				asserts.assert(game.guests[0].pos == 1);
 				guestTransport.disconnect();
@@ -64,9 +66,9 @@ class RunTests {
 	
 }
 
-class MockHostTransport implements HostTransport<Command, Message> {
-	public final events:Signal<HostEvent<Command>>;
-	public final eventsTrigger:SignalTrigger<HostEvent<Command>>;
+class MockHostTransport implements HostTransport {
+	public final events:Signal<HostEvent>;
+	public final eventsTrigger:SignalTrigger<HostEvent>;
 	public final guests:Array<MockGuestTransport>;
 	
 	var count:Int = 0;
@@ -90,28 +92,28 @@ class MockHostTransport implements HostTransport<Command, Message> {
 		});
 	}
 	
-	public function sendToGuest(id:Int, message:Message):Promise<Noise> {
+	public function sendToGuest(id:Int, data:Chunk):Promise<Noise> {
 		return switch guests.find(guest -> guest.id == id) {
 			case null:
 				new Error(NotFound, 'Guest $id not found');
 			case guest:
-				guest.eventsTrigger.trigger(MessageReceived(message));
+				guest.eventsTrigger.trigger(DataReceived(data));
 				Noise;
 		}
 	}
 	
-	public function broadcast(message:Message):Promise<Noise> {
-		for(guest in guests) guest.eventsTrigger.trigger(MessageReceived(message));
+	public function broadcast(data:Chunk):Promise<Noise> {
+		for(guest in guests) guest.eventsTrigger.trigger(DataReceived(data));
 		return Noise;
 	}
 }
 
-class MockGuestTransport implements GuestTransport<Command, Message> {
+class MockGuestTransport implements GuestTransport {
 	public static var list:Array<MockGuestTransport> = [];
 	static var count:Int = 0;
 	
-	public final events:Signal<GuestEvent<Message>>;
-	public final eventsTrigger:SignalTrigger<GuestEvent<Message>>;
+	public final events:Signal<GuestEvent>;
+	public final eventsTrigger:SignalTrigger<GuestEvent>;
 	public var id(default, null):Int;
 	final host:MockHostTransport;
 	
@@ -138,9 +140,9 @@ class MockGuestTransport implements GuestTransport<Command, Message> {
 		return Noise;
 		
 	}
-	public function sendToHost(command:Command):Promise<Noise> {
+	public function sendToHost(data:Chunk):Promise<Noise> {
 		if(!connected) return new Error('Not connected');
-		host.eventsTrigger.trigger(CommandReceived(id, command));
+		host.eventsTrigger.trigger(DataReceived(id, data));
 		return Noise;
 	}
 }

@@ -6,11 +6,8 @@ import tink.websocket.Client;
 
 using tink.CoreApi;
 
-@:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.WebSocketTransport.WebSocketHostTransportBase))
-class WebSocketHostTransport<Command, Message> {}
-
-class WebSocketHostTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements HostTransport<Command, Message> {
-	public final events:Signal<HostEvent<Command>>;
+class WebSocketHostTransport implements HostTransport {
+	public final events:Signal<HostEvent>;
 	
 	final server:Server;
 	final clients:Map<Int, ConnectedClient> = new Map();
@@ -22,7 +19,7 @@ class WebSocketHostTransportBase<Command, Message> extends StringTransport<Noise
 		
 		final trigger = Signal.trigger();
 		events = trigger;
-		
+		 
 		server.errors.handle(e -> trigger.trigger(Errored(e)));
 		
 		server.clientConnected.handle(client -> {
@@ -31,13 +28,13 @@ class WebSocketHostTransportBase<Command, Message> extends StringTransport<Noise
 			
 			trigger.trigger(GuestConnected(id));
 			
-			client.send(Text(stringifyDownlink(Meta(Connected(id)))));
+			client.send(Binary(serialize(Metadata(Connected(id)))));
 			
 			client.messageReceived.handle(function(m) switch m {
-				case Text(parseUplink(_) => Success(env)): 
+				case Binary(unserialize(_) => Success(env)): 
 					switch env {
-						case Meta(_): // unused
-						case Command(command): trigger.trigger(CommandReceived(id, command));
+						case Metadata(_): // unused
+						case Data(data): trigger.trigger(DataReceived(id, data));
 					}
 				case _:
 			});
@@ -46,31 +43,35 @@ class WebSocketHostTransportBase<Command, Message> extends StringTransport<Noise
 		});
 	}
 	
-	public function sendToGuest(id:Int, message:Message):Promise<Noise> {
+	public function sendToGuest(id:Int, data:Chunk):Promise<Noise> {
 		return switch clients[id] {
-			case null: new Error(NotFound, 'Client $id is not connected');
+			case null:
+				new Error(NotFound, 'Client $id is not connected');
 			case client:
-				client.send(Text(stringifyDownlink(Message(message)))); Noise;
+				client.send(Binary(serialize(Data(deata))));
+				Noise;
 		}
 	}
 	
-	public function broadcast(message:Message):Promise<Noise> {
-		final json = stringifyDownlink(Message(message));
-		for(client in clients) client.send(Text(json));
+	public function broadcast(data:Chunk):Promise<Noise> {
+		final serialized = serialize(Data(data));
+		for(client in clients) client.send(Binary(serialized));
 		return Noise;
 	}
 	
+	inline function serialize(v:DownlinkEnvelope<DownlinkMeta>):Chunk
+		return tink.Json.stringify(v);
+	
+	inline function unserialize(v:Chunk):Outcome<UplinkEnvelope<Noise>>
+		return tink.Json.parse((v:UplinkEnvelope<Noise>));
 	
 }
 
-@:genericBuild(exp.rtg.Macro.buildStringTransport(exp.rtg.transport.WebSocketTransport.WebSocketGuestTransportBase))
-class WebSocketGuestTransport<Command, Message> {}
-
-class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Noise, DownlinkMeta, Command, Message> implements GuestTransport<Command, Message> {
-	public final events:Signal<GuestEvent<Message>>;
+class WebSocketGuestTransport implements GuestTransport {
+	public final events:Signal<GuestEvent>;
 	
 	final getClient:Void->Client;
-	final trigger:SignalTrigger<GuestEvent<Message>>;
+	final trigger:SignalTrigger<GuestEvent>;
 	
 	var client:Client;
 	var binding:CallbackLink;
@@ -84,13 +85,13 @@ class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Nois
 		return new Promise((resolve, reject) -> {
 			client = getClient();
 			binding = client.messageReceived.handle(function(m) switch m {
-				case Text(parseDownlink(_) => Success(env)): 
+				case Binary(unserialize(_) => Success(env)): 
 					switch env {
-						case Meta(Connected(_)):
+						case Metadata(Connected(_)):
 							trigger.trigger(Connected);
 							resolve(Noise);
-						case Message(message):
-							trigger.trigger(MessageReceived(message));
+						case Data(data):
+							trigger.trigger(DataReceived(deata));
 					}
 				case _:
 			});
@@ -104,10 +105,16 @@ class WebSocketGuestTransportBase<Command, Message> extends StringTransport<Nois
 		return Noise;
 	}
 	
-	public function sendToHost(command:Command):Promise<Noise> {
-		client.send(Text(stringifyUplink(Command(command))));
+	public function sendToHost(data:Chunk):Promise<Noise> {
+		client.send(Binary(serialize(Data(data))));
 		return Noise;
 	}
+	
+	inline function serialize(v:UpEnvelope<DownlinkMeta>):Chunk
+		return tink.Json.stringify(v);
+	
+	inline function unserialize(v:Chunk):Outcome<DownlinkEnvelope<Noise>>
+		return tink.Json.parse((v:DownlinkEnvelope<Noise>));
 }
 
 

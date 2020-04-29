@@ -33,8 +33,21 @@ class Guest<Command, Message> {
 	public inline function connect() {
 		return transport.connect();
 	}
+	
+	public function join(room:RoomIdentifier) {
+		
+	}
+	
+	public function create(type:String) {
+		return transport.sendToHost(command);
+	}
 
 	public inline function send(command:Command):Promise<Noise> {
 		return transport.sendToHost(command);
 	}
+}
+
+enum RoomIdentifier {
+	ByType(v:String);
+	ById(id:Int);
 }
