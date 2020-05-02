@@ -1,4 +1,4 @@
--cp ${SCOPE_DIR}/../why-duplex/src
--D why-duplex=0.0.0
---macro Sys.println("haxe_libraries/why-duplex.hxml:2: [Warning] Using dev version of library why-duplex")
+# @install: lix --silent download "gh://github.com/why-haxe/why-duplex#a5a6cb779f83c92fb92004abc608f0e27f1a1232" into why-duplex/0.0.0/github/a5a6cb779f83c92fb92004abc608f0e27f1a1232
 -lib tink_chunk
+-cp ${HAXE_LIBCACHE}/why-duplex/0.0.0/github/a5a6cb779f83c92fb92004abc608f0e27f1a1232/src
+-D why-duplex=0.0.0
