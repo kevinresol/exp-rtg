@@ -102,7 +102,7 @@ class Seat implements SeatObject<Chunk, Chunk> {
 		this.guest = guest;
 
 		data = guest.data.select(o -> switch o {
-			case Success(Data(id, data)) if (this.id == id): Some(data);
+			case Success(Data(id, data)) if (id == room.id): Some(data);
 			case _: None;
 		});
 	}
