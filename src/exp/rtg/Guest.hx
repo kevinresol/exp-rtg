@@ -35,11 +35,11 @@ class Guest {
 		});
 	}
 
-	public function joinRoom(id:Int):Promise<Seat> {
+	public function joinRoom(id:Int):Promise<Seat<Chunk, Chunk>> {
 		return send(Metadata(JoinRoom(id))).next(_ -> {
 			data.select(v -> switch v {
 				case Success(Metadata(RoomJoined(i, as, type))) if (i == id):
-					Some(Success(new Seat(as, {id: id, type: type}, this)));
+					Some(Success(new RawSeat(as, {id: id, type: type}, this).asSeat()));
 				case Success(Metadata(RoomJoinFailed(i, reason))) if (i == id):
 					Some(Failure(new Error(reason.getName())));
 				case _:
@@ -48,11 +48,11 @@ class Guest {
 		});
 	}
 
-	public function rejoinRoom(id:Int, gid:Int):Promise<Seat> {
+	public function rejoinRoom(id:Int, gid:Int):Promise<Seat<Chunk, Chunk>> {
 		return send(Metadata(RejoinRoom(id, gid))).next(_ -> {
 			data.select(v -> switch v {
 				case Success(Metadata(RoomRejoined(i, as, type))) if (i == id && as == gid):
-					Some(Success(new Seat(as, {id: id, type: type}, this)));
+					Some(Success(new RawSeat(as, {id: id, type: type}, this).asSeat()));
 				case Success(Metadata(RoomRejoinFailed(i, as, reason))) if (i == id && as == gid):
 					Some(Failure(new Error(reason.getName())));
 				case _:
@@ -84,8 +84,15 @@ interface SeatObject<Incoming, Outgoing> {
 	function leave():Future<Noise>;
 }
 
+@:forward
+abstract Seat<In, Out>(SeatObject<In, Out>) from SeatObject<In, Out> to SeatObject<In, Out> {
+	public function transform<In2, Out2>(incoming:In->In2, outgoing:Out2->Out) {
+		return new TransformedSeat(this, incoming, outgoing);
+	}
+}
+
 @:access(exp.rtg)
-class Seat implements SeatObject<Chunk, Chunk> {
+class RawSeat implements SeatObject<Chunk, Chunk> {
 	public final id:Int;
 	public final room:{
 		final id:Int;
@@ -107,10 +114,6 @@ class Seat implements SeatObject<Chunk, Chunk> {
 		});
 	}
 
-	public function wrap<In, Out>(serialize:Out->Chunk, unserialize:Chunk->Outcome<In, Error>):SeatObject<Outcome<In, Error>, Out> {
-		return new WrappedSeat(this, serialize, unserialize);
-	}
-
 	public function send(data:Chunk):Promise<Noise> {
 		return guest.send(Data(room.id, data));
 	}
@@ -118,26 +121,30 @@ class Seat implements SeatObject<Chunk, Chunk> {
 	public function leave():Future<Noise> {
 		throw 'TODO';
 	}
+
+	public inline function asSeat():Seat<Chunk, Chunk> {
+		return this;
+	}
 }
 
-class WrappedSeat<In, Out> implements SeatObject<Outcome<In, Error>, Out> {
+class TransformedSeat<RawIn, RawOut, In, Out> implements SeatObject<In, Out> {
 	public final id:Int;
 	public final room:RoomInfo;
-	public final data:Signal<Outcome<In, Error>>;
+	public final data:Signal<In>;
 
-	final serialize:Out->Chunk;
-	final seat:Seat;
+	final transformOutgoing:Out->RawOut;
+	final seat:Seat<RawIn, RawOut>;
 
-	public function new(seat:Seat, serialize:Out->Chunk, unserialize:Chunk->Outcome<In, Error>) {
+	public function new(seat:Seat<RawIn, RawOut>, transformIncoming:RawIn->In, transformOutgoing:Out->RawOut) {
 		this.seat = seat;
 		this.id = seat.id;
 		this.room = seat.room;
-		this.serialize = serialize;
-		this.data = seat.data.map(unserialize);
+		this.transformOutgoing = transformOutgoing;
+		this.data = seat.data.map(transformIncoming);
 	}
 
 	public function send(data:Out):Promise<Noise> {
-		return seat.send(serialize(data));
+		return seat.send(transformOutgoing(data));
 	}
 
 	public function leave():Future<Noise> {
