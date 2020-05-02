@@ -1,6 +1,6 @@
 -cp tests
--main Client
--js bin/playground/client.js
+-main Server
+-js bin/playground/server.js
 -dce full
 
 -lib exp-rtg

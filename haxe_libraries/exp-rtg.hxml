@@ -1,2 +1,4 @@
 -cp src
+-lib why-duplex
 -lib tink_state
+-lib tink_json

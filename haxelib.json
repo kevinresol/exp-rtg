@@ -11,6 +11,8 @@
   "releasenote": "initial release",
   "version": "0.0.0",
   "dependencies": {
-    "tink_state": ""
+    "why-duplex": "",
+    "tink_state": "",
+    "tink_json": ""
   }
 }
