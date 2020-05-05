@@ -23,10 +23,3 @@ install:
   
 script:
   - lix run travix node
-  - lix run travix js
-  - lix run travix lua
-  - lix run travix php
-  - lix run travix python
-  - lix run travix cs
-  - lix run travix java
-  - lix run travix interp
