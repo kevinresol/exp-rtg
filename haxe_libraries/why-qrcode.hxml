@@ -1,0 +1,4 @@
+# @install: lix --silent download "gh://github.com/why-haxe/why-qrcode#535d017d927e81ece409b7e12c3bf81774ec81c8" into why-qrcode/0.0.0/github/535d017d927e81ece409b7e12c3bf81774ec81c8
+-lib tink_core
+-cp ${HAXE_LIBCACHE}/why-qrcode/0.0.0/github/535d017d927e81ece409b7e12c3bf81774ec81c8/src
+-D why-qrcode=0.0.0

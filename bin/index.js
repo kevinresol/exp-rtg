@@ -7,6 +7,9 @@ function $extend(from, fields) {
 	if( fields.toString !== Object.prototype.toString ) proto.toString = fields.toString;
 	return proto;
 }
+var Command = $hxEnums["Command"] = { __ename__ : true, __constructs__ : ["SetDirection"]
+	,SetDirection: ($_=function(dir) { return {_hx_index:0,dir:dir,__enum__:"Command",toString:$estr}; },$_.__params__ = ["dir"],$_)
+};
 var EReg = function(r,opt) {
 	this.r = new RegExp(r,opt.split("u").join(""));
 };
@@ -29,6 +32,91 @@ EReg.prototype = {
 	}
 	,__class__: EReg
 };
+var Game = function() {
+	this.players = [];
+	var timer = new haxe_Timer(100);
+	timer.run = $bind(this,this.step);
+};
+Game.__name__ = true;
+Game.prototype = {
+	removePlayer: function(v) {
+		var _g_head = v.list.h;
+		while(_g_head != null) {
+			var val = _g_head.item;
+			_g_head = _g_head.next;
+			var v1 = val;
+			window.document.body.removeChild(v1.div);
+			v1.div = null;
+		}
+		HxOverrides.remove(this.players,v);
+	}
+	,addPlayer: function() {
+		var player = new Player();
+		this.players.push(player);
+		return player;
+	}
+	,step: function() {
+		var _g = 0;
+		var _g1 = this.players;
+		while(_g < _g1.length) {
+			var player = _g1[_g];
+			++_g;
+			player.step();
+		}
+	}
+	,__class__: Game
+};
+var Player = function() {
+	this.list = new haxe_ds_List();
+	this.dir = 3;
+	this.list.add(new Block(0,0));
+	this.list.add(new Block(1,0));
+	this.list.add(new Block(2,0));
+	this.list.add(new Block(3,0));
+	this.list.add(new Block(4,0));
+};
+Player.__name__ = true;
+Player.prototype = {
+	step: function() {
+		var head = this.list.last();
+		var tail = this.list.pop();
+		switch(this.dir) {
+		case 0:
+			tail.set(head.x,head.y - 1);
+			break;
+		case 1:
+			tail.set(head.x,head.y + 1);
+			break;
+		case 2:
+			tail.set(head.x - 1,head.y);
+			break;
+		case 3:
+			tail.set(head.x + 1,head.y);
+			break;
+		}
+		this.list.add(tail);
+	}
+	,__class__: Player
+};
+var Block = function(x,y) {
+	this.div = window.document.createElement("div");
+	this.div.style.position = "absolute";
+	this.div.style.width = "10px";
+	this.div.style.height = "10px";
+	this.div.style.backgroundColor = "red";
+	window.document.body.appendChild(this.div);
+	this.set(x,y);
+};
+Block.__name__ = true;
+Block.prototype = {
+	set: function(x,y) {
+		this.x = x;
+		this.y = y;
+		this.div.style.left = x * 10 + "px";
+		this.div.style.top = y * 10 + "px";
+	}
+	,__class__: Block
+};
 var HxOverrides = function() { };
 HxOverrides.__name__ = true;
 HxOverrides.cca = function(s,index) {
@@ -49,6 +137,14 @@ HxOverrides.substr = function(s,pos,len) {
 		}
 	}
 	return s.substr(pos,len);
+};
+HxOverrides.remove = function(a,obj) {
+	var i = a.indexOf(obj);
+	if(i == -1) {
+		return false;
+	}
+	a.splice(i,1);
+	return true;
 };
 HxOverrides.iter = function(a) {
 	return { cur : 0, arr : a, hasNext : function() {
@@ -82,42 +178,55 @@ Playground.runHost = function() {
 		switch(o._hx_index) {
 		case 0:
 			var host = o.data;
-			console.log("src/Playground.hx:24:","host running. id = " + id);
-			console.log("src/Playground.hx:25:",window.location.href + ("?id=" + id));
+			console.log("src/Playground.hx:26:","host running. id = " + id);
+			var url = window.location.href + ("?id=" + id);
+			tink_core__$Promise_Promise_$Impl_$.next(tink_core__$Promise_Promise_$Impl_$.next(new why_qrcode_encoder_JsEncoder("L").encode(url),function(data) {
+				return new why_qrcode_printer_DataUrlPrinter().print(data);
+			}),function(v1) {
+				var a = window.document.createElement("a");
+				a.href = url;
+				a.target = "_blank";
+				var img = window.document.createElement("img");
+				img.src = v1;
+				img.style.position = "absolute";
+				img.style.opacity = "0.3";
+				a.appendChild(img);
+				return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(window.document.body.appendChild(a))));
+			}).handle(function(o1) {
+				console.log("src/Playground.hx:44:",o1);
+				return;
+			});
 			host.rooms.created.listen(function(room) {
 				var game = new Game();
-				console.log("src/Playground.hx:28:","room " + room.id + " created");
+				console.log("src/Playground.hx:48:","room " + room.id + " created");
 				room.guests.connected.listen(function(guest) {
-					console.log("src/Playground.hx:30:","guest " + guest.id + " connected");
+					console.log("src/Playground.hx:50:","guest " + guest.id + " connected");
 					var player = game.addPlayer();
-					guest.data.listen(function(chunk) {
-						switch(chunk.getByte(0)) {
+					tink_core__$Signal_Signal_$Impl_$.map(guest.data,function(chunk) {
+						return new tink_json_Parser1().tryParse(chunk.toString());
+					}).listen(function(o2) {
+						switch(o2._hx_index) {
 						case 0:
-							player.dx = 20;
-							player.dy = 0;
+							var dir = o2.data.dir;
+							player.dir = dir;
 							break;
 						case 1:
-							player.dx = -20;
-							player.dy = 0;
+							var e = o2.failure;
+							console.log("src/Playground.hx:56:",e);
 							break;
-						case 2:
-							player.dx = 0;
-							player.dy = 20;
-							break;
-						case 3:
-							player.dx = 0;
-							player.dy = -20;
-							break;
-						default:
 						}
+					});
+					guest.disconnected.handle(function(o3) {
+						console.log("src/Playground.hx:60:","guest " + guest.id + " disconnected, error: " + Std.string(o3));
+						game.removePlayer(player);
 					});
 				});
 			});
 			host.rooms.create("default");
 			break;
 		case 1:
-			var e = o.failure;
-			console.log("src/Playground.hx:54:",e);
+			var e1 = o.failure;
+			console.log("src/Playground.hx:68:",e1);
 			break;
 		}
 	});
@@ -130,105 +239,42 @@ Playground.runGuest = function(id) {
 		switch(o._hx_index) {
 		case 0:
 			var guest = o.data;
-			console.log("src/Playground.hx:61:","connected to host");
+			console.log("src/Playground.hx:75:","connected to host");
 			guest.joinRoom(0).handle(function(o1) {
 				switch(o1._hx_index) {
 				case 0:
 					var seat = o1.data;
-					console.log("src/Playground.hx:64:","joined room");
+					console.log("src/Playground.hx:78:","joined room");
 					seat.data.listen(function(o2) {
-						console.log("src/Playground.hx:65:",o2.toString());
+						console.log("src/Playground.hx:79:",o2.toString());
 					});
 					var addButton = function(text,value) {
 						var button = window.document.createElement("button");
 						button.innerText = text;
-						var bytes = new haxe_io_Bytes(new ArrayBuffer(1));
-						bytes.b[0] = value;
 						button.onclick = function() {
-							seat.send(tink_chunk_ByteChunk.of(bytes));
+							var addButton1 = tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer3().write(Command.SetDirection(value))));
+							seat.send(addButton1);
 						};
 						window.document.body.appendChild(button);
 					};
-					addButton("right",0);
-					addButton("left",1);
-					addButton("down",2);
-					addButton("up",3);
+					addButton("Right",3);
+					addButton("Left",2);
+					addButton("Down",1);
+					addButton("Up",0);
 					break;
 				case 1:
 					var e = o1.failure;
-					console.log("src/Playground.hx:82:",e);
+					console.log("src/Playground.hx:94:",e);
 					break;
 				}
 			});
 			break;
 		case 1:
 			var e1 = o.failure;
-			console.log("src/Playground.hx:85:",e1);
+			console.log("src/Playground.hx:97:",e1);
 			break;
 		}
 	});
-};
-var Game = function() {
-	this.players = [];
-	var _gthis = this;
-	var t = -1.;
-	var run = null;
-	run = function(now) {
-		var dt = now - t;
-		if(t > 0) {
-			_gthis.update(dt / 1000);
-		}
-		t = now;
-		window.requestAnimationFrame(run);
-	};
-	window.requestAnimationFrame(run);
-};
-Game.__name__ = true;
-Game.prototype = {
-	addPlayer: function() {
-		var player = new Player();
-		this.players.push(player);
-		return player;
-	}
-	,update: function(dt) {
-		var _g = 0;
-		var _g1 = this.players;
-		while(_g < _g1.length) {
-			var player = _g1[_g];
-			++_g;
-			var _g2 = player;
-			_g2.set_x(_g2.x + dt * player.dx);
-			var _g3 = player;
-			_g3.set_y(_g3.y + dt * player.dy);
-		}
-	}
-	,__class__: Game
-};
-var Player = function() {
-	this.dy = 0;
-	this.dx = 20;
-	this.y = 0;
-	this.x = 0;
-	this.div = window.document.createElement("div");
-	this.div.style.position = "absolute";
-	this.div.style.width = "10px";
-	this.div.style.height = "10px";
-	this.div.style.backgroundColor = "red";
-	window.document.body.appendChild(this.div);
-};
-Player.__name__ = true;
-Player.prototype = {
-	set_x: function(v) {
-		this.x = v;
-		this.div.style.left = v + "px";
-		return v;
-	}
-	,set_y: function(v) {
-		this.y = v;
-		this.div.style.top = v + "px";
-		return v;
-	}
-	,__class__: Player
 };
 var Std = function() { };
 Std.__name__ = true;
@@ -332,7 +378,7 @@ var exp_rtg_Guest = function(client) {
 	this.client = client;
 	this.disconnected = client.disconnected;
 	this.data = tink_core__$Signal_Signal_$Impl_$.map(client.data,function(v) {
-		return new tink_json_Parser1().tryParse(v.toString());
+		return new tink_json_Parser2().tryParse(v.toString());
 	});
 };
 exp_rtg_Guest.__name__ = true;
@@ -345,7 +391,7 @@ exp_rtg_Guest.prototype = {
 	joinRoom: function(id) {
 		var _gthis = this;
 		var message = exp_rtg_message_Uplink.Metadata(exp_rtg_message_UplinkMeta.JoinRoom(id));
-		return tink_core__$Promise_Promise_$Impl_$.next(this.client.send(tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer1().write(message)))),function(_) {
+		return tink_core__$Promise_Promise_$Impl_$.next(this.client.send(tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer2().write(message)))),function(_) {
 			return tink_core__$Future_Future_$Impl_$.first(tink_core__$Signal_Signal_$Impl_$.nextTime(tink_core__$Signal_Signal_$Impl_$.select(_gthis.data,function(v) {
 				if(v._hx_index == 0) {
 					var _g = v.data;
@@ -413,7 +459,7 @@ exp_rtg_RawSeat.__name__ = true;
 exp_rtg_RawSeat.prototype = {
 	send: function(data) {
 		var message = exp_rtg_message_Uplink.Data(this.room.id,data);
-		return this.guest.client.send(tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer1().write(message))));
+		return this.guest.client.send(tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer2().write(message))));
 	}
 	,__class__: exp_rtg_RawSeat
 };
@@ -425,13 +471,13 @@ var exp_rtg_Host = function(roomTypeSupported,server) {
 		return guest.data.listen(function(command) {
 			switch(command._hx_index) {
 			case 0:
-				var _g1 = command.data;
-				switch(_g1._hx_index) {
+				var _g = command.data;
+				switch(_g._hx_index) {
 				case 0:
-					var _g4 = _g1.v;
-					switch(_g4._hx_index) {
+					var _g3 = _g.v;
+					switch(_g3._hx_index) {
 					case 0:
-						var type = _g4.type;
+						var type = _g3.type;
 						if(roomTypeSupported(type)) {
 							var room = _gthis.rooms.create(type);
 							guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomCreated(room.id,type)));
@@ -440,12 +486,12 @@ var exp_rtg_Host = function(roomTypeSupported,server) {
 						}
 						break;
 					case 1:
-						var id = _g4.id;
-						var _g = tink_state__$Observable_Observable_$Impl_$.get_value(_gthis.rooms.map.observe(id));
-						if(_g == null) {
+						var id = _g3.id;
+						var _g1 = tink_state__$Observable_Observable_$Impl_$.get_value(_gthis.rooms.map.observe(id));
+						if(_g1 == null) {
 							guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomJoinFailed(id,exp_rtg_message_RoomJoinFailReason.NotExist)));
 						} else {
-							var room1 = _g;
+							var room1 = _g1;
 							var roomGuest = new exp_rtg_RoomGuest(guest,room1);
 							var _this = room1.guests.array;
 							_this.insertMany(_this.items.length,[roomGuest]);
@@ -456,25 +502,25 @@ var exp_rtg_Host = function(roomTypeSupported,server) {
 						}
 						break;
 					case 2:
-						var as = _g4.gid;
-						var id1 = _g4.id;
+						var as = _g3.gid;
+						var id1 = _g3.id;
 						var _g2 = tink_state__$Observable_Observable_$Impl_$.get_value(_gthis.rooms.map.observe(id1));
 						if(_g2 == null) {
 							guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomRejoinFailed(id1,as,exp_rtg_message_RoomRejoinFailReason.NotExist)));
 						} else {
 							var room2 = _g2;
-							var _g3 = room2.pendingRejoin.h[as];
-							if(_g3 == null) {
+							var _g4 = room2.pendingRejoin.h[as];
+							if(_g4 == null) {
 								guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomRejoinFailed(id1,as,exp_rtg_message_RoomRejoinFailReason.NotExist)));
 							} else {
-								var slot = _g3;
+								var slot = _g4;
 								slot.trigger(tink_core_Outcome.Success(new exp_rtg_RoomGuest(guest,room2,as)));
 								guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomRejoined(id1,as,room2.type)));
 							}
 						}
 						break;
 					case 3:
-						var id2 = _g4.id;
+						var id2 = _g3.id;
 						var _g5 = tink_state__$Observable_Observable_$Impl_$.get_value(_gthis.rooms.map.observe(id2));
 						if(_g5 == null) {
 							guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomLeaveFailed(id2,exp_rtg_message_RoomLeaveFailReason.NotExist)));
@@ -488,7 +534,7 @@ var exp_rtg_Host = function(roomTypeSupported,server) {
 						}
 						break;
 					case 4:
-						var id3 = _g4.id;
+						var id3 = _g3.id;
 						var _g6 = tink_state__$Observable_Observable_$Impl_$.get_value(_gthis.rooms.map.observe(id3));
 						if(_g6 == null) {
 							guest.send(exp_rtg_message_Downlink.Metadata(exp_rtg_message_DownlinkMeta.RoomCloseFailed(id3,exp_rtg_message_RoomCloseFailReason.NotExist)));
@@ -500,8 +546,8 @@ var exp_rtg_Host = function(roomTypeSupported,server) {
 					}
 					break;
 				case 1:
-					var data = _g1.v;
-					var id4 = _g1.roomId;
+					var data = _g.v;
+					var id4 = _g.roomId;
 					break;
 				}
 				break;
@@ -1022,7 +1068,17 @@ var haxe_ds_List = function() {
 };
 haxe_ds_List.__name__ = true;
 haxe_ds_List.prototype = {
-	push: function(item) {
+	add: function(item) {
+		var x = new haxe_ds__$List_ListNode(item,null);
+		if(this.h == null) {
+			this.h = x;
+		} else {
+			this.q.next = x;
+		}
+		this.q = x;
+		this.length++;
+	}
+	,push: function(item) {
 		var x = new haxe_ds__$List_ListNode(item,this.h);
 		this.h = x;
 		if(this.q == null) {
@@ -1035,6 +1091,13 @@ haxe_ds_List.prototype = {
 			return null;
 		} else {
 			return this.h.item;
+		}
+	}
+	,last: function() {
+		if(this.q == null) {
+			return null;
+		} else {
+			return this.q.item;
 		}
 	}
 	,pop: function() {
@@ -1388,10 +1451,7 @@ var tink__$Chunk_EmptyChunk = function() {
 tink__$Chunk_EmptyChunk.__name__ = true;
 tink__$Chunk_EmptyChunk.__super__ = tink_chunk_ChunkBase;
 tink__$Chunk_EmptyChunk.prototype = $extend(tink_chunk_ChunkBase.prototype,{
-	getByte: function(i) {
-		return 0;
-	}
-	,toString: function() {
+	toString: function() {
 		return "";
 	}
 	,toBytes: function() {
@@ -1491,10 +1551,7 @@ tink_chunk_ByteChunk.of = function(b) {
 };
 tink_chunk_ByteChunk.__super__ = tink_chunk_ChunkBase;
 tink_chunk_ByteChunk.prototype = $extend(tink_chunk_ChunkBase.prototype,{
-	getByte: function(index) {
-		return this.data.bytes[this.from + index];
-	}
-	,toBytes: function() {
+	toBytes: function() {
 		if(this.wrapped == null) {
 			this.wrapped = haxe_io_Bytes.ofData(this.data);
 		}
@@ -3278,6 +3335,205 @@ tink_json_Parser1.__super__ = tink_json_BasicParser;
 tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 	parse0: function() {
 		var __ret = this.parse1();
+		var o = __ret.SetDirection;
+		if(o != null) {
+			return Command.SetDirection(o.dir);
+		} else {
+			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse0"}));
+		}
+	}
+	,parse1: function() {
+		var _gthis = this;
+		var v_SetDirection = null;
+		var __start__ = this.pos;
+		while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+		var tmp;
+		if(this.max > this.pos && this.source.charCodeAt(this.pos) == 123) {
+			this.pos += 1;
+			while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+			tmp = true;
+		} else {
+			tmp = false;
+		}
+		if(!tmp) {
+			this.die("Expected {");
+		}
+		while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+		var tmp1;
+		if(this.max > this.pos && this.source.charCodeAt(this.pos) == 125) {
+			this.pos += 1;
+			while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+			tmp1 = true;
+		} else {
+			tmp1 = false;
+		}
+		if(!tmp1) {
+			while(true) {
+				var __name__ = this.parseString();
+				while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+				var tmp2;
+				if(this.max > this.pos && this.source.charCodeAt(this.pos) == 58) {
+					this.pos += 1;
+					while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+					tmp2 = true;
+				} else {
+					tmp2 = false;
+				}
+				if(!tmp2) {
+					this.die("Expected :");
+				}
+				if("SetDirection".length == __name__.max - __name__.min && __name__.source.substring(__name__.min,__name__.max) == "SetDirection") {
+					while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+					var v_SetDirection1;
+					if(this.max > this.pos + 3 && this.source.charCodeAt(this.pos) == 110 && this.source.charCodeAt(this.pos + 1) == 117 && this.source.charCodeAt(this.pos + 2) == 108 && this.source.charCodeAt(this.pos + 3) == 108) {
+						this.pos += 4;
+						while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+						v_SetDirection1 = true;
+					} else {
+						v_SetDirection1 = false;
+					}
+					v_SetDirection = v_SetDirection1 ? null : this.parse2();
+				} else {
+					this.skipValue();
+				}
+				while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+				var tmp3;
+				if(this.max > this.pos && this.source.charCodeAt(this.pos) == 44) {
+					this.pos += 1;
+					while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+					tmp3 = true;
+				} else {
+					tmp3 = false;
+				}
+				if(!tmp3) {
+					break;
+				}
+			}
+			while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+			var tmp4;
+			if(this.max > this.pos && this.source.charCodeAt(this.pos) == 125) {
+				this.pos += 1;
+				while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+				tmp4 = true;
+			} else {
+				tmp4 = false;
+			}
+			if(!tmp4) {
+				this.die("Expected }");
+			}
+		}
+		var __missing__ = function(field) {
+			return _gthis.die("missing field \"" + field + "\"",__start__);
+		};
+		return { SetDirection : v_SetDirection};
+	}
+	,parse2: function() {
+		var _gthis = this;
+		var v_dir = null;
+		var hasv_dir = false;
+		var __start__ = this.pos;
+		while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+		var tmp;
+		if(this.max > this.pos && this.source.charCodeAt(this.pos) == 123) {
+			this.pos += 1;
+			while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+			tmp = true;
+		} else {
+			tmp = false;
+		}
+		if(!tmp) {
+			this.die("Expected {");
+		}
+		while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+		var tmp1;
+		if(this.max > this.pos && this.source.charCodeAt(this.pos) == 125) {
+			this.pos += 1;
+			while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+			tmp1 = true;
+		} else {
+			tmp1 = false;
+		}
+		if(!tmp1) {
+			while(true) {
+				var __name__ = this.parseString();
+				while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+				var tmp2;
+				if(this.max > this.pos && this.source.charCodeAt(this.pos) == 58) {
+					this.pos += 1;
+					while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+					tmp2 = true;
+				} else {
+					tmp2 = false;
+				}
+				if(!tmp2) {
+					this.die("Expected :");
+				}
+				if("dir".length == __name__.max - __name__.min && __name__.source.substring(__name__.min,__name__.max) == "dir") {
+					var this1 = this.parseNumber();
+					var v = Std.parseInt(this1.source.substring(this1.min,this1.max));
+					switch(v) {
+					case 0:case 1:case 2:case 3:
+						v_dir = v;
+						break;
+					default:
+						var list = [0,1,2,3];
+						throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Unrecognized enum value: " + v + ". Accepted values are: " + new tink_json_Writer1().write(list),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 385, className : "tink.json.Parser1", methodName : "parse2"}));
+					}
+					hasv_dir = true;
+				} else {
+					this.skipValue();
+				}
+				while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+				var tmp3;
+				if(this.max > this.pos && this.source.charCodeAt(this.pos) == 44) {
+					this.pos += 1;
+					while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+					tmp3 = true;
+				} else {
+					tmp3 = false;
+				}
+				if(!tmp3) {
+					break;
+				}
+			}
+			while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+			var tmp4;
+			if(this.max > this.pos && this.source.charCodeAt(this.pos) == 125) {
+				this.pos += 1;
+				while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
+				tmp4 = true;
+			} else {
+				tmp4 = false;
+			}
+			if(!tmp4) {
+				this.die("Expected }");
+			}
+		}
+		var __missing__ = function(field) {
+			return _gthis.die("missing field \"" + field + "\"",__start__);
+		};
+		return { dir : hasv_dir ? v_dir : __missing__("dir")};
+	}
+	,parse: function(source) {
+		this.init(source);
+		return this.parse0();
+	}
+	,tryParse: function(source) {
+		var _gthis = this;
+		return tink_core_TypedError.catchExceptions(function() {
+			return _gthis.parse(source);
+		},null,{ fileName : "tink/json/macros/Macro.hx", lineNumber : 93, className : "tink.json.Parser1", methodName : "tryParse"});
+	}
+	,__class__: tink_json_Parser1
+});
+var tink_json_Parser2 = function() {
+	tink_json_BasicParser.call(this);
+};
+tink_json_Parser2.__name__ = true;
+tink_json_Parser2.__super__ = tink_json_BasicParser;
+tink_json_Parser2.prototype = $extend(tink_json_BasicParser.prototype,{
+	parse0: function() {
+		var __ret = this.parse1();
 		var o = __ret.Metadata;
 		if(o != null) {
 			return exp_rtg_message_Downlink.Metadata(o.v);
@@ -3286,7 +3542,7 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 			if(o1 != null) {
 				return exp_rtg_message_Downlink.Data(o1.roomId,o1.v);
 			} else {
-				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse0"}));
+				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse0"}));
 			}
 		}
 	}
@@ -3598,7 +3854,7 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 											if(o9 != null) {
 												return exp_rtg_message_DownlinkMeta.RoomCloseFailed(o9.id,o9.reason);
 											} else {
-												throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse4"}));
+												throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse4"}));
 											}
 										}
 									}
@@ -3906,11 +4162,11 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				return exp_rtg_message_RoomCloseFailReason.NotHost;
 			default:
 				var invalid = _g;
-				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser1", methodName : "parse7"}));
+				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser2", methodName : "parse7"}));
 			}
 		} else {
 			var __ret = this.parse8();
-			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse7"}));
+			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse7"}));
 		}
 	}
 	,parse8: function() {
@@ -4162,11 +4418,11 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				return exp_rtg_message_RoomCreateFailReason.UnsupportedType;
 			} else {
 				var invalid = _g;
-				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser1", methodName : "parse11"}));
+				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser2", methodName : "parse11"}));
 			}
 		} else {
 			var __ret = this.parse8();
-			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse11"}));
+			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse11"}));
 		}
 	}
 	,parse12: function() {
@@ -4353,11 +4609,11 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				return exp_rtg_message_RoomJoinFailReason.NotExist;
 			} else {
 				var invalid = _g;
-				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser1", methodName : "parse14"}));
+				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser2", methodName : "parse14"}));
 			}
 		} else {
 			var __ret = this.parse8();
-			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse14"}));
+			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse14"}));
 		}
 	}
 	,parse15: function() {
@@ -4553,11 +4809,11 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				return exp_rtg_message_RoomLeaveFailReason.NotJoined;
 			default:
 				var invalid = _g;
-				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser1", methodName : "parse17"}));
+				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser2", methodName : "parse17"}));
 			}
 		} else {
 			var __ret = this.parse8();
-			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse17"}));
+			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse17"}));
 		}
 	}
 	,parse18: function() {
@@ -4666,11 +4922,11 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				return exp_rtg_message_RoomRejoinFailReason.NotExist;
 			} else {
 				var invalid = _g;
-				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser1", methodName : "parse19"}));
+				throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Invalid constructor " + invalid,{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 370, className : "tink.json.Parser2", methodName : "parse19"}));
 			}
 		} else {
 			var __ret = this.parse8();
-			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse19"}));
+			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser2", methodName : "parse19"}));
 		}
 	}
 	,parse: function(source) {
@@ -4681,9 +4937,9 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 		var _gthis = this;
 		return tink_core_TypedError.catchExceptions(function() {
 			return _gthis.parse(source);
-		},null,{ fileName : "tink/json/macros/Macro.hx", lineNumber : 93, className : "tink.json.Parser1", methodName : "tryParse"});
+		},null,{ fileName : "tink/json/macros/Macro.hx", lineNumber : 93, className : "tink.json.Parser2", methodName : "tryParse"});
 	}
-	,__class__: tink_json_Parser1
+	,__class__: tink_json_Parser2
 });
 var tink_json__$Representation_Representation_$Impl_$ = {};
 tink_json__$Representation_Representation_$Impl_$.__name__ = true;
@@ -4945,6 +5201,33 @@ var tink_json_Writer1 = function() {
 tink_json_Writer1.__name__ = true;
 tink_json_Writer1.__super__ = tink_json_BasicWriter;
 tink_json_Writer1.prototype = $extend(tink_json_BasicWriter.prototype,{
+	write: function(value) {
+		this.init();
+		this.buf += String.fromCodePoint(91);
+		var first = true;
+		var _g = 0;
+		while(_g < value.length) {
+			var value1 = value[_g];
+			++_g;
+			if(first) {
+				first = false;
+			} else {
+				this.buf += String.fromCodePoint(44);
+			}
+			var value2 = value1;
+			this.buf += value2 == null ? "null" : "" + value2;
+		}
+		this.buf += String.fromCodePoint(93);
+		return this.buf.toString();
+	}
+	,__class__: tink_json_Writer1
+});
+var tink_json_Writer2 = function() {
+	tink_json_BasicWriter.call(this);
+};
+tink_json_Writer2.__name__ = true;
+tink_json_Writer2.__super__ = tink_json_BasicWriter;
+tink_json_Writer2.prototype = $extend(tink_json_BasicWriter.prototype,{
 	parse0: function(value) {
 		var _g = value;
 		switch(_g._hx_index) {
@@ -5037,7 +5320,30 @@ tink_json_Writer1.prototype = $extend(tink_json_BasicWriter.prototype,{
 		this.parse0(value);
 		return this.buf.toString();
 	}
-	,__class__: tink_json_Writer1
+	,__class__: tink_json_Writer2
+});
+var tink_json_Writer3 = function() {
+	tink_json_BasicWriter.call(this);
+};
+tink_json_Writer3.__name__ = true;
+tink_json_Writer3.__super__ = tink_json_BasicWriter;
+tink_json_Writer3.prototype = $extend(tink_json_BasicWriter.prototype,{
+	parse0: function(value) {
+		var dir = value.dir;
+		this.buf += "{\"SetDirection\":{";
+		this.buf += "\"dir\"";
+		this.buf += String.fromCodePoint(58);
+		var value1 = dir;
+		var value2 = value1;
+		this.buf += value2 == null ? "null" : "" + value2;
+		this.buf += "}}";
+	}
+	,write: function(value) {
+		this.init();
+		this.parse0(value);
+		return this.buf.toString();
+	}
+	,__class__: tink_json_Writer3
 });
 var tink_state__$Observable_Observable_$Impl_$ = {};
 tink_state__$Observable_Observable_$Impl_$.__name__ = true;
@@ -5537,7 +5843,7 @@ var why_duplex_peerjs_PeerJsClient = function(conn) {
 	this.conn = conn;
 	this.disconnected = tink_core__$Future_Future_$Impl_$.async(function(cb) {
 		conn.on("error",function(e) {
-			var tmp = haxe_ds_Option.Some(tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsClient.hx", lineNumber : 16, className : "why.duplex.peerjs.PeerJsClient", methodName : "new"}));
+			var tmp = haxe_ds_Option.Some(tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsClient.hx", lineNumber : 16, className : "why.duplex.peerjs.PeerJsClient", methodName : "new"}));
 			cb(tmp);
 		});
 		conn.on("close",function() {
@@ -5586,7 +5892,7 @@ why_duplex_peerjs__$PeerJsClient_ConenctContext.__name__ = true;
 why_duplex_peerjs__$PeerJsClient_ConenctContext.prototype = {
 	onError: function(e) {
 		this.conn.off("open",$bind(this,this.onOpen));
-		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsClient.hx", lineNumber : 58, className : "why.duplex.peerjs._PeerJsClient.ConenctContext", methodName : "onError"})));
+		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsClient.hx", lineNumber : 58, className : "why.duplex.peerjs._PeerJsClient.ConenctContext", methodName : "onError"})));
 	}
 	,onOpen: function() {
 		this.conn.off("error",$bind(this,this.onError));
@@ -5614,7 +5920,7 @@ var why_duplex_peerjs_PeerJsServer = function(peer) {
 	this.connected = this1;
 	var this3 = new tink_core__$Signal_SimpleSignal(function(cb1) {
 		var onError = function(e) {
-			var onError1 = tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsServer.hx", lineNumber : 22, className : "why.duplex.peerjs.PeerJsServer", methodName : "new"});
+			var onError1 = tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsServer.hx", lineNumber : 22, className : "why.duplex.peerjs.PeerJsServer", methodName : "new"});
 			tink_core__$Callback_Callback_$Impl_$.invoke(cb1,onError1);
 		};
 		peer.on("error",onError);
@@ -5650,13 +5956,74 @@ why_duplex_peerjs__$PeerJsServer_BindContext.__name__ = true;
 why_duplex_peerjs__$PeerJsServer_BindContext.prototype = {
 	onError: function(e) {
 		this.peer.off("open",$bind(this,this.onOpen));
-		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsServer.hx", lineNumber : 52, className : "why.duplex.peerjs._PeerJsServer.BindContext", methodName : "onError"})));
+		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsServer.hx", lineNumber : 52, className : "why.duplex.peerjs._PeerJsServer.BindContext", methodName : "onError"})));
 	}
 	,onOpen: function(id) {
 		this.peer.off("error",$bind(this,this.onError));
 		this.cb(tink_core_Outcome.Success(new why_duplex_peerjs_PeerJsServer(this.peer)));
 	}
 	,__class__: why_duplex_peerjs__$PeerJsServer_BindContext
+};
+var why_qrcode_encoder_JsEncoder = function(errorCorrectionLevel) {
+	this.errorCorrectionLevel = errorCorrectionLevel;
+};
+why_qrcode_encoder_JsEncoder.__name__ = true;
+why_qrcode_encoder_JsEncoder.prototype = {
+	encode: function(text) {
+		var qr = qrcode(0,this.errorCorrectionLevel);
+		qr.addData(text);
+		qr.make();
+		var count = qr.getModuleCount();
+		var data = [];
+		var _g = 0;
+		var _g1 = count;
+		while(_g < _g1) {
+			var y = _g++;
+			data[y] = [];
+			var _g2 = 0;
+			var _g11 = count;
+			while(_g2 < _g11) {
+				var x = _g2++;
+				data[y][x] = qr.isDark(y,x) ? 1 : 0;
+			}
+		}
+		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(data)));
+	}
+	,__class__: why_qrcode_encoder_JsEncoder
+};
+var why_qrcode_printer_DataUrlPrinter = function(options) {
+	if(options == null) {
+		options = { };
+	}
+	this.black = options.black == null ? "#000000" : options.black;
+	this.white = options.white == null ? "#ffffff" : options.white;
+	this.blockSize = options.blockSize == null ? 4 : options.blockSize;
+};
+why_qrcode_printer_DataUrlPrinter.__name__ = true;
+why_qrcode_printer_DataUrlPrinter.prototype = {
+	print: function(data) {
+		var canvas = window.document.createElement("canvas");
+		var ctx = canvas.getContext("2d",null);
+		canvas.width = canvas.height = (data.length + 4) * this.blockSize;
+		ctx.fillStyle = this.white;
+		ctx.fillRect(0,0,canvas.width,canvas.height);
+		ctx.fillStyle = this.black;
+		var _g = 0;
+		var _g1 = data.length;
+		while(_g < _g1) {
+			var y = _g++;
+			var _g2 = 0;
+			var _g11 = data.length;
+			while(_g2 < _g11) {
+				var x = _g2++;
+				if(data[x][y] == 1) {
+					ctx.fillRect((x + 2) * this.blockSize,(y + 2) * this.blockSize,this.blockSize,this.blockSize);
+				}
+			}
+		}
+		return new tink_core__$Future_SyncFuture(new tink_core__$Lazy_LazyConst(tink_core_Outcome.Success(canvas.toDataURL())));
+	}
+	,__class__: why_qrcode_printer_DataUrlPrinter
 };
 function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id__ = $global.$haxeUID++; var f; if( o.hx__closures__ == null ) o.hx__closures__ = {}; else f = o.hx__closures__[m.__id__]; if( f == null ) { f = m.bind(o); o.hx__closures__[m.__id__] = f; } return f; }
 $global.$haxeUID |= 0;

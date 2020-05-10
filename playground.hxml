@@ -3,5 +3,6 @@
 -js bin/index.js
 -dce full
 
+-lib why-qrcode
 -lib exp-rtg
 -lib tink_url
