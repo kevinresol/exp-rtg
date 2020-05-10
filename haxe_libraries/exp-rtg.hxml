@@ -1,0 +1,6 @@
+# @install: lix --silent download "gh://github.com/kevinresol/exp-rtg#745fcaab4ca448133d0f8d3bb485c0d3a9d1e0ca" into exp-rtg/0.0.0/github/745fcaab4ca448133d0f8d3bb485c0d3a9d1e0ca
+-lib tink_json
+-lib tink_state
+-lib why-duplex
+-cp ${HAXE_LIBCACHE}/exp-rtg/0.0.0/github/745fcaab4ca448133d0f8d3bb485c0d3a9d1e0ca/src
+-D exp-rtg=0.0.0

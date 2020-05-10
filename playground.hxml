@@ -1,0 +1,7 @@
+-cp src
+-main Playground
+-js bin/index.js
+-dce full
+
+-lib exp-rtg
+-lib tink_url

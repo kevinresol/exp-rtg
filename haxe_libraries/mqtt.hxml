@@ -1,0 +1,7 @@
+-D mqtt=0.0.0
+# @install: lix --silent download "gh://github.com/kevinresol/mqtt#589cd094854527fc9ca239e0c2595c058720e957" into mqtt/0.0.0/github/589cd094854527fc9ca239e0c2595c058720e957
+-lib tink_state
+-lib tink_url
+-lib tink_chunk
+# -cp ${HAXE_LIBCACHE}/mqtt/0.0.0/github/589cd094854527fc9ca239e0c2595c058720e957/src
+-cp ../mqtt/src
