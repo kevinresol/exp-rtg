@@ -49,9 +49,22 @@ class Playground {
 					room.guests.connected.handle(function(guest) {
 						trace('guest ${guest.id} connected');
 						var player = game.addPlayer();
+						
+						player.dead.handle(function(_) game.removePlayer(player));
+						
 						guest.data.map(chunk -> tink.Json.parse((chunk:Command))).handle(function(o) switch o {
-							case Success(SetDirection(dir)):
-								player.dir = dir;
+							case Success(Turn(turn)):
+								player.dir = switch [player.dir, turn] {
+									case [Up, Left]: Left;
+									case [Down, Left]: Right;
+									case [Left, Left]: Down;
+									case [Right, Left]: Up;
+									case [Up, Right]: Right;
+									case [Down, Right]: Left;
+									case [Left, Right]: Up;
+									case [Right, Right]: Down;
+								}
+								
 							case Failure(e):
 								trace(e);
 						});
@@ -77,18 +90,23 @@ class Playground {
 					case Success(seat):
 						trace('joined room');
 						seat.data.handle(function(o) trace(o.toString()));
+						
+						var container = document.createDivElement();
+						container.style.display = 'flex';
+						container.style.width = '100vw';
+						container.style.height = '100vh';
+						document.body.appendChild(container);
 
-						function addButton(text:String, value:Direction) {
+						function addButton(text:String, value:Turn) {
 							var button = document.createButtonElement();
+							button.style.flex = '1';
 							button.innerText = text;
-							button.onclick = function() seat.send(tink.Json.stringify(Command.SetDirection(value)));
-							document.body.appendChild(button);
+							button.onclick = function() seat.send(tink.Json.stringify(Command.Turn(value)));
+							container.appendChild(button);
 						}
 
-						addButton('Right', Right);
 						addButton('Left', Left);
-						addButton('Down', Down);
-						addButton('Up', Up);
+						addButton('Right', Right);
 
 					case Failure(e):
 						trace(e);

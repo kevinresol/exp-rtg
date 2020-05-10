@@ -7,8 +7,8 @@ function $extend(from, fields) {
 	if( fields.toString !== Object.prototype.toString ) proto.toString = fields.toString;
 	return proto;
 }
-var Command = $hxEnums["Command"] = { __ename__ : true, __constructs__ : ["SetDirection"]
-	,SetDirection: ($_=function(dir) { return {_hx_index:0,dir:dir,__enum__:"Command",toString:$estr}; },$_.__params__ = ["dir"],$_)
+var Command = $hxEnums["Command"] = { __ename__ : true, __constructs__ : ["Turn"]
+	,Turn: ($_=function(turn) { return {_hx_index:0,turn:turn,__enum__:"Command",toString:$estr}; },$_.__params__ = ["turn"],$_)
 };
 var EReg = function(r,opt) {
 	this.r = new RegExp(r,opt.split("u").join(""));
@@ -33,20 +33,87 @@ EReg.prototype = {
 	,__class__: EReg
 };
 var Game = function() {
+	var _g = [];
+	var _g1 = 0;
+	while(_g1 < 60) {
+		++_g1;
+		var _g11 = [];
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g11.push(-1);
+		_g.push(_g11);
+	}
+	this.cells = _g;
 	this.players = [];
 	var timer = new haxe_Timer(100);
 	timer.run = $bind(this,this.step);
+	var div = window.document.createElement("div");
+	div.style.width = 600 + "px";
+	div.style.height = 500 + "px";
+	div.style.border = "solid 1px black";
+	window.document.body.appendChild(div);
+	this.refresh();
 };
 Game.__name__ = true;
 Game.prototype = {
 	removePlayer: function(v) {
-		var _g_head = v.list.h;
-		while(_g_head != null) {
-			var val = _g_head.item;
-			_g_head = _g_head.next;
-			var v1 = val;
-			window.document.body.removeChild(v1.div);
-			v1.div = null;
+		if(!v.destroyed) {
+			v.destroyed = true;
+			var _g_head = v.list.h;
+			while(_g_head != null) {
+				var val = _g_head.item;
+				_g_head = _g_head.next;
+				var v1 = val;
+				window.document.body.removeChild(v1.div);
+				v1.div = null;
+			}
 		}
 		HxOverrides.remove(this.players,v);
 	}
@@ -55,61 +122,137 @@ Game.prototype = {
 		this.players.push(player);
 		return player;
 	}
+	,refresh: function() {
+		if(this.food != null) {
+			var _this = this.food;
+			window.document.body.removeChild(_this.div);
+			_this.div = null;
+		}
+		this.food = new Block(Std.random(60),Std.random(50),"green");
+	}
 	,step: function() {
 		var _g = 0;
-		var _g1 = this.players;
-		while(_g < _g1.length) {
-			var player = _g1[_g];
-			++_g;
-			player.step();
+		while(_g < 60) {
+			var i = _g++;
+			var _g1 = 0;
+			while(_g1 < 50) {
+				var j = _g1++;
+				this.cells[i][j] = -1;
+			}
+		}
+		var eaten = false;
+		var _g11 = 0;
+		var _g2 = this.players;
+		while(_g11 < _g2.length) {
+			var player = _g2[_g11];
+			++_g11;
+			if(player.step(this.food)) {
+				eaten = true;
+			}
+			var _g1_head = player.list.h;
+			while(_g1_head != null) {
+				var val = _g1_head.item;
+				_g1_head = _g1_head.next;
+				var block = val;
+				this.cells[block.x][block.y] = player.id;
+			}
+		}
+		var _g3 = 0;
+		var _g4 = this.players;
+		while(_g3 < _g4.length) {
+			var player1 = _g4[_g3];
+			++_g3;
+			var head = player1.head();
+			var occupied = this.cells[head.x][head.y];
+			if(occupied != -1 && occupied != player1.id) {
+				player1.die();
+			}
+		}
+		if(eaten) {
+			this.refresh();
 		}
 	}
 	,__class__: Game
 };
 var Player = function() {
+	this.destroyed = false;
 	this.list = new haxe_ds_List();
 	this.dir = 3;
+	this.id = Player.ids++;
 	this.list.add(new Block(0,0));
 	this.list.add(new Block(1,0));
 	this.list.add(new Block(2,0));
 	this.list.add(new Block(3,0));
 	this.list.add(new Block(4,0));
+	this.dead = this._dead = new tink_core_FutureTrigger();
 };
 Player.__name__ = true;
 Player.prototype = {
-	step: function() {
+	head: function() {
+		return this.list.last();
+	}
+	,step: function(food) {
+		console.log("src/Game.hx:96:",this.list.length);
 		var head = this.list.last();
 		var tail = this.list.pop();
+		var x = head.x;
+		var y = head.y;
 		switch(this.dir) {
 		case 0:
-			tail.set(head.x,head.y - 1);
+			y = head.y - 1;
 			break;
 		case 1:
-			tail.set(head.x,head.y + 1);
+			y = head.y + 1;
 			break;
 		case 2:
-			tail.set(head.x - 1,head.y);
+			x = head.x - 1;
 			break;
 		case 3:
-			tail.set(head.x + 1,head.y);
+			x = head.x + 1;
 			break;
 		}
-		this.list.add(tail);
+		if(x == food.x && y == food.y) {
+			this.list.add(new Block(x,y));
+			this.list.push(tail);
+			return true;
+		} else {
+			tail.set(x,y);
+			this.list.add(tail);
+			return false;
+		}
+	}
+	,die: function() {
+		this._dead.trigger(tink_core_Noise.Noise);
 	}
 	,__class__: Player
 };
-var Block = function(x,y) {
+var Block = function(x,y,color) {
+	if(color == null) {
+		color = "red";
+	}
 	this.div = window.document.createElement("div");
 	this.div.style.position = "absolute";
 	this.div.style.width = "10px";
 	this.div.style.height = "10px";
-	this.div.style.backgroundColor = "red";
+	this.div.style.backgroundColor = color;
 	window.document.body.appendChild(this.div);
 	this.set(x,y);
 };
 Block.__name__ = true;
 Block.prototype = {
 	set: function(x,y) {
+		if(x < 0) {
+			x = 59;
+		}
+		if(x >= 60) {
+			x = 0;
+		}
+		if(y < 0) {
+			y = 49;
+		}
+		if(y >= 50) {
+			y = 0;
+		}
 		this.x = x;
 		this.y = y;
 		this.div.style.left = x * 10 + "px";
@@ -202,22 +345,68 @@ Playground.runHost = function() {
 				room.guests.connected.listen(function(guest) {
 					console.log("src/Playground.hx:50:","guest " + guest.id + " connected");
 					var player = game.addPlayer();
+					player.dead.handle(function(_) {
+						game.removePlayer(player);
+					});
 					tink_core__$Signal_Signal_$Impl_$.map(guest.data,function(chunk) {
 						return new tink_json_Parser1().tryParse(chunk.toString());
 					}).listen(function(o2) {
 						switch(o2._hx_index) {
 						case 0:
-							var dir = o2.data.dir;
-							player.dir = dir;
+							var turn = o2.data.turn;
+							var tmp;
+							switch(player.dir) {
+							case 0:
+								switch(turn) {
+								case 0:
+									tmp = 2;
+									break;
+								case 1:
+									tmp = 3;
+									break;
+								}
+								break;
+							case 1:
+								switch(turn) {
+								case 0:
+									tmp = 3;
+									break;
+								case 1:
+									tmp = 2;
+									break;
+								}
+								break;
+							case 2:
+								switch(turn) {
+								case 0:
+									tmp = 1;
+									break;
+								case 1:
+									tmp = 0;
+									break;
+								}
+								break;
+							case 3:
+								switch(turn) {
+								case 0:
+									tmp = 0;
+									break;
+								case 1:
+									tmp = 1;
+									break;
+								}
+								break;
+							}
+							player.dir = tmp;
 							break;
 						case 1:
 							var e = o2.failure;
-							console.log("src/Playground.hx:56:",e);
+							console.log("src/Playground.hx:69:",e);
 							break;
 						}
 					});
 					guest.disconnected.handle(function(o3) {
-						console.log("src/Playground.hx:60:","guest " + guest.id + " disconnected, error: " + Std.string(o3));
+						console.log("src/Playground.hx:73:","guest " + guest.id + " disconnected, error: " + Std.string(o3));
 						game.removePlayer(player);
 					});
 				});
@@ -226,7 +415,7 @@ Playground.runHost = function() {
 			break;
 		case 1:
 			var e1 = o.failure;
-			console.log("src/Playground.hx:68:",e1);
+			console.log("src/Playground.hx:81:",e1);
 			break;
 		}
 	});
@@ -239,39 +428,43 @@ Playground.runGuest = function(id) {
 		switch(o._hx_index) {
 		case 0:
 			var guest = o.data;
-			console.log("src/Playground.hx:75:","connected to host");
+			console.log("src/Playground.hx:88:","connected to host");
 			guest.joinRoom(0).handle(function(o1) {
 				switch(o1._hx_index) {
 				case 0:
 					var seat = o1.data;
-					console.log("src/Playground.hx:78:","joined room");
+					console.log("src/Playground.hx:91:","joined room");
 					seat.data.listen(function(o2) {
-						console.log("src/Playground.hx:79:",o2.toString());
+						console.log("src/Playground.hx:92:",o2.toString());
 					});
+					var container = window.document.createElement("div");
+					container.style.display = "flex";
+					container.style.width = "100vw";
+					container.style.height = "100vh";
+					window.document.body.appendChild(container);
 					var addButton = function(text,value) {
 						var button = window.document.createElement("button");
+						button.style.flex = "1";
 						button.innerText = text;
 						button.onclick = function() {
-							var addButton1 = tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer3().write(Command.SetDirection(value))));
+							var addButton1 = tink_chunk_ByteChunk.of(haxe_io_Bytes.ofString(new tink_json_Writer3().write(Command.Turn(value))));
 							seat.send(addButton1);
 						};
-						window.document.body.appendChild(button);
+						container.appendChild(button);
 					};
-					addButton("Right",3);
-					addButton("Left",2);
-					addButton("Down",1);
-					addButton("Up",0);
+					addButton("Left",0);
+					addButton("Right",1);
 					break;
 				case 1:
 					var e = o1.failure;
-					console.log("src/Playground.hx:94:",e);
+					console.log("src/Playground.hx:112:",e);
 					break;
 				}
 			});
 			break;
 		case 1:
 			var e1 = o.failure;
-			console.log("src/Playground.hx:97:",e1);
+			console.log("src/Playground.hx:115:",e1);
 			break;
 		}
 	});
@@ -3335,16 +3528,16 @@ tink_json_Parser1.__super__ = tink_json_BasicParser;
 tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 	parse0: function() {
 		var __ret = this.parse1();
-		var o = __ret.SetDirection;
+		var o = __ret.Turn;
 		if(o != null) {
-			return Command.SetDirection(o.dir);
+			return Command.Turn(o.turn);
 		} else {
 			throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Cannot process " + Std.string(__ret),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 359, className : "tink.json.Parser1", methodName : "parse0"}));
 		}
 	}
 	,parse1: function() {
 		var _gthis = this;
-		var v_SetDirection = null;
+		var v_Turn = null;
 		var __start__ = this.pos;
 		while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
 		var tmp;
@@ -3382,17 +3575,17 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				if(!tmp2) {
 					this.die("Expected :");
 				}
-				if("SetDirection".length == __name__.max - __name__.min && __name__.source.substring(__name__.min,__name__.max) == "SetDirection") {
+				if("Turn".length == __name__.max - __name__.min && __name__.source.substring(__name__.min,__name__.max) == "Turn") {
 					while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
-					var v_SetDirection1;
+					var v_Turn1;
 					if(this.max > this.pos + 3 && this.source.charCodeAt(this.pos) == 110 && this.source.charCodeAt(this.pos + 1) == 117 && this.source.charCodeAt(this.pos + 2) == 108 && this.source.charCodeAt(this.pos + 3) == 108) {
 						this.pos += 4;
 						while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
-						v_SetDirection1 = true;
+						v_Turn1 = true;
 					} else {
-						v_SetDirection1 = false;
+						v_Turn1 = false;
 					}
-					v_SetDirection = v_SetDirection1 ? null : this.parse2();
+					v_Turn = v_Turn1 ? null : this.parse2();
 				} else {
 					this.skipValue();
 				}
@@ -3425,12 +3618,12 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 		var __missing__ = function(field) {
 			return _gthis.die("missing field \"" + field + "\"",__start__);
 		};
-		return { SetDirection : v_SetDirection};
+		return { Turn : v_Turn};
 	}
 	,parse2: function() {
 		var _gthis = this;
-		var v_dir = null;
-		var hasv_dir = false;
+		var v_turn = null;
+		var hasv_turn = false;
 		var __start__ = this.pos;
 		while(this.pos < this.max && this.source.charCodeAt(this.pos) < 33) this.pos++;
 		var tmp;
@@ -3468,18 +3661,18 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 				if(!tmp2) {
 					this.die("Expected :");
 				}
-				if("dir".length == __name__.max - __name__.min && __name__.source.substring(__name__.min,__name__.max) == "dir") {
+				if("turn".length == __name__.max - __name__.min && __name__.source.substring(__name__.min,__name__.max) == "turn") {
 					var this1 = this.parseNumber();
 					var v = Std.parseInt(this1.source.substring(this1.min,this1.max));
 					switch(v) {
-					case 0:case 1:case 2:case 3:
-						v_dir = v;
+					case 0:case 1:
+						v_turn = v;
 						break;
 					default:
-						var list = [0,1,2,3];
+						var list = [0,1];
 						throw new js__$Boot_HaxeError(new tink_core_TypedError(422,"Unrecognized enum value: " + v + ". Accepted values are: " + new tink_json_Writer1().write(list),{ fileName : "tink/json/macros/GenReader.hx", lineNumber : 385, className : "tink.json.Parser1", methodName : "parse2"}));
 					}
-					hasv_dir = true;
+					hasv_turn = true;
 				} else {
 					this.skipValue();
 				}
@@ -3512,7 +3705,7 @@ tink_json_Parser1.prototype = $extend(tink_json_BasicParser.prototype,{
 		var __missing__ = function(field) {
 			return _gthis.die("missing field \"" + field + "\"",__start__);
 		};
-		return { dir : hasv_dir ? v_dir : __missing__("dir")};
+		return { turn : hasv_turn ? v_turn : __missing__("turn")};
 	}
 	,parse: function(source) {
 		this.init(source);
@@ -5329,11 +5522,11 @@ tink_json_Writer3.__name__ = true;
 tink_json_Writer3.__super__ = tink_json_BasicWriter;
 tink_json_Writer3.prototype = $extend(tink_json_BasicWriter.prototype,{
 	parse0: function(value) {
-		var dir = value.dir;
-		this.buf += "{\"SetDirection\":{";
-		this.buf += "\"dir\"";
+		var turn = value.turn;
+		this.buf += "{\"Turn\":{";
+		this.buf += "\"turn\"";
 		this.buf += String.fromCodePoint(58);
-		var value1 = dir;
+		var value1 = turn;
 		var value2 = value1;
 		this.buf += value2 == null ? "null" : "" + value2;
 		this.buf += "}}";
@@ -5843,7 +6036,7 @@ var why_duplex_peerjs_PeerJsClient = function(conn) {
 	this.conn = conn;
 	this.disconnected = tink_core__$Future_Future_$Impl_$.async(function(cb) {
 		conn.on("error",function(e) {
-			var tmp = haxe_ds_Option.Some(tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsClient.hx", lineNumber : 16, className : "why.duplex.peerjs.PeerJsClient", methodName : "new"}));
+			var tmp = haxe_ds_Option.Some(tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsClient.hx", lineNumber : 16, className : "why.duplex.peerjs.PeerJsClient", methodName : "new"}));
 			cb(tmp);
 		});
 		conn.on("close",function() {
@@ -5892,7 +6085,7 @@ why_duplex_peerjs__$PeerJsClient_ConenctContext.__name__ = true;
 why_duplex_peerjs__$PeerJsClient_ConenctContext.prototype = {
 	onError: function(e) {
 		this.conn.off("open",$bind(this,this.onOpen));
-		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsClient.hx", lineNumber : 58, className : "why.duplex.peerjs._PeerJsClient.ConenctContext", methodName : "onError"})));
+		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsClient.hx", lineNumber : 58, className : "why.duplex.peerjs._PeerJsClient.ConenctContext", methodName : "onError"})));
 	}
 	,onOpen: function() {
 		this.conn.off("error",$bind(this,this.onError));
@@ -5920,7 +6113,7 @@ var why_duplex_peerjs_PeerJsServer = function(peer) {
 	this.connected = this1;
 	var this3 = new tink_core__$Signal_SimpleSignal(function(cb1) {
 		var onError = function(e) {
-			var onError1 = tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsServer.hx", lineNumber : 22, className : "why.duplex.peerjs.PeerJsServer", methodName : "new"});
+			var onError1 = tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsServer.hx", lineNumber : 22, className : "why.duplex.peerjs.PeerJsServer", methodName : "new"});
 			tink_core__$Callback_Callback_$Impl_$.invoke(cb1,onError1);
 		};
 		peer.on("error",onError);
@@ -5956,7 +6149,7 @@ why_duplex_peerjs__$PeerJsServer_BindContext.__name__ = true;
 why_duplex_peerjs__$PeerJsServer_BindContext.prototype = {
 	onError: function(e) {
 		this.peer.off("open",$bind(this,this.onOpen));
-		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "/Users/kevin/Codes/exp-rtg-page/../why-duplex/src/why/duplex/peerjs/PeerJsServer.hx", lineNumber : 52, className : "why.duplex.peerjs._PeerJsServer.BindContext", methodName : "onError"})));
+		this.cb(tink_core_Outcome.Failure(tink_core_TypedError.withData(500,e.message,e,{ fileName : "why/duplex/peerjs/PeerJsServer.hx", lineNumber : 52, className : "why.duplex.peerjs._PeerJsServer.BindContext", methodName : "onError"})));
 	}
 	,onOpen: function(id) {
 		this.peer.off("error",$bind(this,this.onError));
@@ -6040,6 +6233,7 @@ js_Boot.__toStr = ({ }).toString;
 if(ArrayBuffer.prototype.slice == null) {
 	ArrayBuffer.prototype.slice = js_lib__$ArrayBuffer_ArrayBufferCompat.sliceImpl;
 }
+Player.ids = 0;
 exp_rtg_Room.ids = 0;
 haxe_crypto_Base64.CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 haxe_crypto_Base64.BYTES = haxe_io_Bytes.ofString(haxe_crypto_Base64.CHARS);

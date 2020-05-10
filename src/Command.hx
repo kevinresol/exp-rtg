@@ -1,5 +1,5 @@
 package; 
 
 enum Command {
-	SetDirection(dir:Direction);
+	Turn(turn:Turn);
 }
