@@ -1,4 +1,4 @@
-# @install: lix --silent download "gh://github.com/why-haxe/why-duplex#a5a6cb779f83c92fb92004abc608f0e27f1a1232" into why-duplex/0.0.0/github/a5a6cb779f83c92fb92004abc608f0e27f1a1232
+# @install: lix --silent download "gh://github.com/why-haxe/why-duplex#2852c190365c5463bf4cd408fa562cce6d8c86d4" into why-duplex/0.0.0/github/2852c190365c5463bf4cd408fa562cce6d8c86d4
 -lib tink_chunk
--cp ${HAXE_LIBCACHE}/why-duplex/0.0.0/github/a5a6cb779f83c92fb92004abc608f0e27f1a1232/src
+-cp ${HAXE_LIBCACHE}/why-duplex/0.0.0/github/2852c190365c5463bf4cd408fa562cce6d8c86d4/src
 -D why-duplex=0.0.0
