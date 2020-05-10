@@ -22,8 +22,7 @@ class Host {
 				switch command {
 					case Success(Metadata(CreateRoom(type))):
 						if (roomTypeSupported(type)) {
-							var room = new Room(type);
-							rooms.add(room);
+							var room = rooms.create(type);
 							guest.send(Metadata(RoomCreated(room.id, type)));
 						} else {
 							guest.send(Metadata(RoomCreateFailed(type, UnsupportedType)));
@@ -149,6 +148,12 @@ class Rooms {
 				case _:
 			});
 		});
+	}
+
+	public function create(type:String):Room {
+		var room = new Room(type);
+		add(room);
+		return room;
 	}
 
 	inline function get(id:Int):Room {
