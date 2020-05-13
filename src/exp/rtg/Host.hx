@@ -34,8 +34,13 @@ class Host {
 								guest.send(Metadata(RoomJoinFailed(id, NotExist)));
 							case room:
 								var roomGuest = new RoomGuest(guest, room);
-								room.guests.add(roomGuest);
+
+								// register callback first before adding to room (so user get notfied),
+								// this make sure the remove-from-room callback has higher priority
+								// and user-registered callbacks will be run after the guest has been actually removed from room, for consistency
 								roomGuest.disconnected.handle(_ -> room.guests.remove(roomGuest.id));
+
+								room.guests.add(roomGuest);
 								guest.send(Metadata(RoomJoined(id, roomGuest.id, room.type)));
 						}
 
@@ -178,20 +183,23 @@ class Rooms {
 class RoomGuests {
 	public final connected:Signal<RoomGuest>;
 	public final disconnected:Signal<RoomGuest>;
+	public var length(get, never):Int;
 
 	final array:ObservableArray<RoomGuest> = new ObservableArray();
 
 	public function new() {
 		connected = new Signal(cb -> {
 			array.changes.handle(change -> switch change {
-				case Insert(index, values): for (v in values)
+				case Insert(index, values):
+					for (v in values)
 						cb.invoke(v);
 				case _:
 			});
 		});
 		disconnected = new Signal(cb -> {
 			array.changes.handle(change -> switch change {
-				case Remove(index, values): for (v in values)
+				case Remove(index, values):
+					for (v in values)
 						cb.invoke(v);
 				case _:
 			});
@@ -208,11 +216,14 @@ class RoomGuests {
 	public function remove(id:Int):Bool {
 		for (guest in array.values()) {
 			if (guest.id == id) {
-				array.remove(guest);
-				return true;
+				return array.remove(guest);
 			}
 		}
 		return false;
+	}
+
+	inline function get_length() {
+		return @:privateAccess array.items.length;
 	}
 }
 
