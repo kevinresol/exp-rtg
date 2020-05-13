@@ -34,8 +34,13 @@ class Host {
 								guest.send(Metadata(RoomJoinFailed(id, NotExist)));
 							case room:
 								var roomGuest = new RoomGuest(guest, room);
-								room.guests.add(roomGuest);
+
+								// register callback first before adding to room (so user get notfied),
+								// this make sure the remove-from-room callback has higher priority
+								// and user-registered callbacks will be run after the guest has been actually removed from room, for consistency
 								roomGuest.disconnected.handle(_ -> room.guests.remove(roomGuest.id));
+
+								room.guests.add(roomGuest);
 								guest.send(Metadata(RoomJoined(id, roomGuest.id, room.type)));
 						}
 
@@ -88,7 +93,7 @@ class Host {
 }
 
 @:access(exp.rtg)
-private class Room {
+class Room {
 	static var ids = 0;
 
 	public final id:Int;
@@ -103,6 +108,7 @@ private class Room {
 		this.type = type;
 		this.guests = new RoomGuests();
 		this.pendingRejoin = new Map();
+		this.closed = _closed = Future.trigger();
 	}
 
 	public inline function broadcast(data:Chunk) {
@@ -111,6 +117,7 @@ private class Room {
 
 	public function close() {
 		_broadcast(Metadata(RoomClosed(id)));
+		_closed.trigger(Noise);
 		destroy();
 	}
 
@@ -208,6 +215,10 @@ class RoomGuests {
 			}
 		}
 		return false;
+	}
+
+	inline function get_length() {
+		return @:privateAccess array.items.length;
 	}
 }
 
