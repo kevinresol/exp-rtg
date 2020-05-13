@@ -99,6 +99,9 @@ class Room {
 	public final id:Int;
 	public final type:String;
 	public final guests:RoomGuests;
+	public final closed:Future<Noise>;
+
+	final _closed:FutureTrigger<Noise>;
 
 	final pendingRejoin:Map<Int, PromiseTrigger<RoomGuest>>;
 	var guestIds = 0;
@@ -159,6 +162,7 @@ class Rooms {
 
 	public function create(type:String):Room {
 		var room = new Room(type);
+		room.closed.handle(remove.bind(room.id));
 		add(room);
 		return room;
 	}
@@ -180,6 +184,7 @@ class Rooms {
 class RoomGuests {
 	public final connected:Signal<RoomGuest>;
 	public final disconnected:Signal<RoomGuest>;
+	public var length(get, never):Int;
 
 	final array:ObservableArray<RoomGuest> = new ObservableArray();
 
