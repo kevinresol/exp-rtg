@@ -47,12 +47,14 @@ class RunTests {
 		Promise.inParallel([
 			host.waitForRoomCreation().next(room -> {
 				new Promise(function(resolve, reject) {
+					var received = 0;
 					var count = 0;
 					room.guests.connected.handle(function(guest) {
+						asserts.assert(room.guests.length == ++count);
 						guest.waitForData().handle(function(o) switch o {
 							case Success(chunk):
 								asserts.assert(chunk.toString() == message + guest.id);
-								if (++count == 4)
+								if (++received == 4)
 									resolve(Noise);
 							case Failure(e):
 								reject(e);
@@ -65,16 +67,51 @@ class RunTests {
 					roomId.trigger(id);
 
 					function join(guest:Guest) {
-						return guest.joinRoom(id).next(seat -> seat.send(message + seat.id));
+						return guest.joinRoom(id).next(seat -> seat.send(message + seat.id).swap(guest));
 					}
 
-					Promise.inParallel([
-						join(guest),
-						Promise.inParallel([
-							for (i in 0...3)
-								Guest.connect(WebSocketClient.connect.bind('ws://localhost:8585')).next(join)
-						]),
-					]);
+					Promise.inParallel([join(guest)].concat([
+						for (i in 0...3)
+							Guest.connect(WebSocketClient.connect.bind('ws://localhost:8585')).next(join)
+					]));
+				});
+			}).noise(),
+		]).handle(asserts.handle);
+
+		return asserts;
+	}
+
+	public function disconnect() {
+		var type = 'chat';
+		var message = 'Joined! ';
+		var roomId = Future.trigger();
+		Promise.inParallel([
+			host.waitForRoomCreation().next(room -> {
+				new Promise(function(resolve, reject) {
+					var connected = 0;
+					var disconnected = 0;
+					room.guests.connected.handle(function(guest) {
+						asserts.assert(room.guests.length == ++connected - disconnected);
+						guest.disconnected.handle(_ -> {
+							asserts.assert(room.guests.length == connected - ++disconnected);
+							if (disconnected == 4)
+								resolve(Noise);
+						});
+					});
+				});
+			}).noise(),
+			Guest.connect(WebSocketClient.connect.bind('ws://localhost:8585')).next(guest -> {
+				guest.createRoom(type).next(id -> {
+					roomId.trigger(id);
+
+					function join(guest:Guest) {
+						return guest.joinRoom(id).next(_ -> guest.disconnect());
+					}
+
+					Promise.inParallel([join(guest)].concat([
+						for (i in 0...3)
+							Guest.connect(WebSocketClient.connect.bind('ws://localhost:8585')).next(join)
+					]));
 				});
 			}).noise(),
 		]).handle(asserts.handle);
