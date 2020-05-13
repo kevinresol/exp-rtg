@@ -94,6 +94,9 @@ class Room {
 	public final id:Int;
 	public final type:String;
 	public final guests:RoomGuests;
+	public final closed:Future<Noise>;
+
+	final _closed:FutureTrigger<Noise>;
 
 	final pendingRejoin:Map<Int, PromiseTrigger<RoomGuest>>;
 	var guestIds = 0;
@@ -103,6 +106,7 @@ class Room {
 		this.type = type;
 		this.guests = new RoomGuests();
 		this.pendingRejoin = new Map();
+		this.closed = _closed = Future.trigger();
 	}
 
 	public inline function broadcast(data:Chunk) {
@@ -111,6 +115,7 @@ class Room {
 
 	public function close() {
 		_broadcast(Metadata(RoomClosed(id)));
+		_closed.trigger(Noise);
 		destroy();
 	}
 
